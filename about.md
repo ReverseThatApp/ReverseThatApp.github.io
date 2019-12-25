@@ -4,12 +4,12 @@ title: About
 permalink: /about/
 ---
 
-Some information about you!
 
-### More Information
-
-A place to include any other types of information that you'd like to include about yourself.
+### Info
+- Engineer by day, researcher by night.
+- Starting to learn and hands on Assembly Lanaguage (arm, arm64).
+- Write tweak and binary patching for iOS apps
+- Find friends who share same passion in iOS apps security
 
 ### Contact me
-
-[email@domain.com](mailto:email@domain.com)
+[mov.x0.0x1@gmail.com](mailto:mov.x0.0x1@gmail.com) or [@mov_x0_0x1](https://twitter.com/mov_x0_0x1)
