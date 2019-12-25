@@ -22,18 +22,18 @@ Below tools are used during this post:
 ## Overview
 - Install and launch the app from App Store and landing to Courses screen then tap on _350 Spanish words_ card, we can see this app provides some free lessons (with star icon) and premium lessons (with lock icon).
 
-[![_config.yml]({{ site.baseurl }}/images/ewa-ios/lessons-screen.png# thumbnail)]({{ site.baseurl }}/images/ewa-ios/lessons-screen.png){:target="_blank"} <br/>**Figure 2: Lessons screen**<br/><br/>
+[![_config.yml]({{ site.baseurl }}/images/ewa-ios/lessons-screen.PNG# thumbnail)]({{ site.baseurl }}/images/ewa-ios/lessons-screen.PNG){:target="_blank"} <br/>**Figure 2: Lessons screen**<br/><br/>
 
  
 - When we tap on free lesson, let say _5. In the hospital_ one, we will see below screen prompted with words ready to learn :)
 
-[![_config.yml]({{ site.baseurl }}/images/ewa-ios/free-lesson.png# thumbnail)]({{ site.baseurl }}/images/ewa-ios/free-lesson.png){:target="_blank"} <br/>**Figure 3: Free lesson popup**<br/><br/>
+[![_config.yml]({{ site.baseurl }}/images/ewa-ios/free-lesson.PNG# thumbnail)]({{ site.baseurl }}/images/ewa-ios/free-lesson.PNG){:target="_blank"} <br/>**Figure 3: Free lesson popup**<br/><br/>
 
 
 
 - But when we tap on locked lesson, let say _6. Body parts_ one, purchase screen will be shown instead and will ask us to subscribe before proceeding premium content :(
 
-[![_config.yml]({{ site.baseurl }}/images/ewa-ios/purchase-screen.png# thumbnail)]({{ site.baseurl }}/images/ewa-ios/purchase-screen.png){:target="_blank"} <br/>**Figure 4: Purchase screen**<br/><br/>
+[![_config.yml]({{ site.baseurl }}/images/ewa-ios/purchase-screen.PNG# thumbnail)]({{ site.baseurl }}/images/ewa-ios/purchase-screen.PNG){:target="_blank"} <br/>**Figure 4: Purchase screen**<br/><br/>
 
 
 
@@ -72,11 +72,11 @@ Below tools are used during this post:
 
 
 
-[![_config.yml]({{ site.baseurl }}/images/ewa-ios/lesson-start-error.png# thumbnail)]({{ site.baseurl }}/images/ewa-ios/lesson-start-error.png){:target="_blank"} <br/>**Figure 10: Premium lesson popup without any words**<br/><br/>
+[![_config.yml]({{ site.baseurl }}/images/ewa-ios/lesson-start-error.PNG# thumbnail)]({{ site.baseurl }}/images/ewa-ios/lesson-start-error.PNG){:target="_blank"} <br/>**Figure 10: Premium lesson popup without any words**<br/><br/>
 
 
 
-[![_config.yml]({{ site.baseurl }}/images/ewa-ios/lesson-details-error.png# thumbnail)]({{ site.baseurl }}/images/ewa-ios/lesson-details-error.png){:target="_blank"} <br/>**Figure 11: Premium lesson details without content**<br/><br/>
+[![_config.yml]({{ site.baseurl }}/images/ewa-ios/lesson-details-error.PNG# thumbnail)]({{ site.baseurl }}/images/ewa-ios/lesson-details-error.PNG){:target="_blank"} <br/>**Figure 11: Premium lesson details without content**<br/><br/>
 
 
 ## Summary
