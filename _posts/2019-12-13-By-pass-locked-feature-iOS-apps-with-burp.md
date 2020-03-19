@@ -5,7 +5,6 @@ title: Bypass locked features on iOS apps with Burp Suite!
 
 In this post I will share some steps to enable blocked or hidden features on iOS app using Burp Suite tool.
 I will use EWA, a language learning app on AppStore to illustrate the whole process.
-
 [![_config.yml]({{ site.baseurl }}/images/ewa-ios/original-response.png)]({{ site.baseurl }}/images/ewa-ios/original-response.png){:target="_blank"} <br/>**Figure 1: Burp Suite**<br/><br/>
 
 

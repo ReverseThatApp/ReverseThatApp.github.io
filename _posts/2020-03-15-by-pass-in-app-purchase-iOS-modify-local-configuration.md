@@ -4,7 +4,6 @@ title: Bypass in-app purchase content in iOS apps by modifying local configurati
 ---
 
 In this post I will share some tips to analysis and unlock in-app purchase contents by modifying local configuration on device. Below is an example of locked features and unlocked ones.
-
 [![locked content]({{ site.baseurl }}/images/wp-ios/in-app-purchase-locked-contents.png)]({{ site.baseurl }}/images/wp-ios/in-app-purchase-locked-contents.png){:target="_blank"} <br/>**BEFORE: In-app purchase locked contents**<br/><br/>
 
 [![unlocked content]({{ site.baseurl }}/images/wp-ios/in-app-purchase-unlocked-contents.png)]({{ site.baseurl }}/images/wp-ios/in-app-purchase-unlocked-contents.png){:target="_blank"} <br/>**AFTER: In-app purchase unlocked contents**<br/><br/>
