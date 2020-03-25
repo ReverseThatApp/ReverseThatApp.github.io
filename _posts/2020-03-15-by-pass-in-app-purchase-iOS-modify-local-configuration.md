@@ -9,7 +9,7 @@ In this post I will share some tips to analysis and unlock in-app purchase conte
 [![unlocked content]({{ site.baseurl }}/images/wp-ios/in-app-purchase-unlocked-contents.png)]({{ site.baseurl }}/images/wp-ios/in-app-purchase-unlocked-contents.png){:target="_blank"} <br/>**AFTER: In-app purchase unlocked contents**<br/><br/>
 
 ## Disclaimer
-This post is for educational purpose only, please use it at your discretion and contact app's author if you find issues. For the demo purpose, I picked up and installed an app on app store which has In-app purchase feature, please allow me to redact app name as PATCHABLE.
+This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. For the demo purpose, I picked up and installed an app on app store which has In-app purchase feature, please allow me to redact app name as PATCHABLE.
 
 ## Prerequisites
 Below tools are used during this post:
@@ -17,7 +17,7 @@ Below tools are used during this post:
 - [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html)
 - [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp)
 - [Hopper Disassembler](https://www.hopperapp.com/download.html)
-- A jailbreak device. This is needed to modify app sanbox data after installation.
+- A jailbroken device. This is needed to modify app sandbox data after installation.
 - [SourceTree](https://www.sourcetreeapp.com/)
 
 ## Overview
@@ -26,11 +26,11 @@ After installing and launching PATCHABLE app on jailbreak device, it shows me a 
 What we need to do is find out if we can disable lock icon on UI, then it might lead us to unlock in-app purchase contents without purchasing. Let's do it ^_^
 
 ## Analysis
-### Static Analysic
-First of all, let's start from UI. What we can see here is locked contents will have top-left lock icon. Let think about how we will implement this UI as a developer.
+### Static Analysis
+First of all, let's start with UI. What we can see here is locked contents will have top-left lock icon. Let think about how we will implement this UI as a developer.
 We just need a card background image and a lock icon on top, right? So let do some static analysis by extracting app **.ipa** file and looking for such kind of image.
 
-With the help of [Frida iOS Dump](https://github.com/AloneMonkey/frida-ios-dump) or [CrackerXI](https://forum.iphonecake.com/index.php?/topic/363020-crackerxi-gui-app-decryption-tool-for-ios-11-12-13/), we can easily pull out **.ipa** file of PATCHABLE app on jailbreak device, unzip **.ipa** and navigate to Payload/PATCHABLE folder and look for image with lock icon, luckily we can find it as below.
+With the help of [Frida iOS Dump](https://github.com/AloneMonkey/frida-ios-dump) or [CrackerXI](https://forum.iphonecake.com/index.php?/topic/363020-crackerxi-gui-app-decryption-tool-for-ios-11-12-13/), we can easily pull out **.ipa** file of PATCHABLE app on jailbroken device, unzip **.ipa** and navigate to Payload/PATCHABLE folder and look for image with lock icon, luckily we can find it as below.
 [![lock icon on Finder]({{ site.baseurl }}/images/wp-ios/sub-lock-finder-search.png)]({{ site.baseurl }}/images/wp-ios/sub-lock-finder-search.png){:target="_blank"} <br/>**Figure 1: Lock icon inside app bundle**<br/><br/>
 
 Why I say luckily, because sometime developer put images inside Assets catalog instead, so after compiling images will be bundled inside **Assets.car** file. Actually there is a tool to extract **Assets.car** file but we will skip for now as we found icon outside.
@@ -122,13 +122,13 @@ Let double confirm again those values like `"include_album_item_ids"`, `"charge_
 [![Search json fields in Hopper]({{ site.baseurl }}/images/wp-ios/hopper-search-charge-type.png)]({{ site.baseurl }}/images/wp-ios/hopper-search-charge-type.png){:target="_blank"} <br/>**Figure 4: Response fields are being used in app**<br/><br/>
 
 Look back to the JSON response field `"localpath": "book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json"`, it's saying that this configuration file will be stored in local device (localpath) with the name **book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756** in app sandbox.
-Let `ssh` to device, then navigate to `/var/mobile/Containers/Data/Application/` folder. This is the place where all installed app sandboxes locate. Due to those are named as random UUIDs, there are some ways to find out which one is PATCHABLE sanbox folder:
-1. `ls -lat`: This command will list all of child directories/files of current directory and sorted by last modify date. If you just installed PATCHABLE app, this command will display PATCHABLE sanbox folder as the top one.
+Let `ssh` to device, then navigate to `/var/mobile/Containers/Data/Application/` folder. This is the place where all installed app sandboxes locate. Due to those are named as random UUIDs, there are some ways to find out which one is PATCHABLE sandbox folder:
+1. `ls -lat`: This command will list all of child directories/files of current directory and sorted by last modify date. If you just installed PATCHABLE app, this command will display PATCHABLE sandbox folder as the top one.
 [![List command]({{ site.baseurl }}/images/wp-ios/list-command.png)]({{ site.baseurl }}/images/wp-ios/list-command.png){:target="_blank"} <br/>**Figure 5: List and sort directories**<br/><br/>
 2. `find . -name "app-bundle-id.plist"`: This command will search plist file inside PATCHABLE sandbox
 [![Find plist command]({{ site.baseurl }}/images/wp-ios/find-plist-command.png)]({{ site.baseurl }}/images/wp-ios/find-plist-command.png){:target="_blank"} <br/>**Figure 6: Find plist location**<br/><br/>
 
-Using one of above command, we can identify that **FBD05B9A-9B57-4637-B8D4-13CFFC51A19A** is the PATHCHABLE sanbox directory. Navigate to this directory and search json file using `find . -name "book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json"` we can see as below this file locates inside Document directory. BRAVO!!!
+Using one of above command, we can identify that **FBD05B9A-9B57-4637-B8D4-13CFFC51A19A** is the PATHCHABLE sandbox directory. Navigate to this directory and search json file using `find . -name "book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json"` we can see as below this file locates inside Document directory. BRAVO!!!
 [![Find json file]({{ site.baseurl }}/images/wp-ios/find-json-file.png)]({{ site.baseurl }}/images/wp-ios/find-json-file.png){:target="_blank"} <br/>**Figure 7: Find json file path**<br/><br/>
 
 It's very straight forward now, let open this file and modify item ids of Free bundle to include all ids and save the file. I will be using `nano` command to edit and save the file
@@ -160,12 +160,12 @@ Instead of modify item ids of free bundle, we can modify below values of premium
 
 ### Shall we stop here or try to find out what happened behind the scene???
 We managed how to unlock the card, but we still dont know what is going here, why modify local file did not work but modify on the fly.
-Let compare app sanbox folders and files before and after it's unlocked.
+Let compare app sandbox folders and files before and after it's unlocked.
 One small tips is that using git to compare files change, so here is what we can do:
-- First, let copy all app sanbox folders from device to laptop, then using git as version control to commit all files inside locally.
-- Next, after content unlocked, copy all app sanbox again and paste on same location as step one, the popup will come out as files existed, so just REPLACE all files.
+- First, let copy all app sandbox folders from device to laptop, then using git as version control to commit all files inside locally.
+- Next, after content unlocked, copy all app sandbox again and paste on same location as step one, the popup will come out as files existed, so just REPLACE all files.
 - Using SourceTree as GUI to see what's new changes
-[![Compare app sanbox changes]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png)]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png){:target="_blank"} <br/>**Figure 12: Sanbox files changed**<br/><br/>
+[![Compare app sandbox changes]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png)]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png){:target="_blank"} <br/>**Figure 12: sandbox files changed**<br/><br/>
 
 As we can see file **ssapp_property** has some new lines with key and value defined which bundles were purchased and there are some changes in same file to configure checksum of downloaded contents also. The file name and file content changes make more senses to what just happened to unlock process.
 To double confirm if new added lines `<key>is_purchased[StoreData.id=...]` are factors to lock premium contents, let remove those keys of this file which locates on device app sandbox `Document/ssapp_property` and relaunch the app, we will see that locked cards back
