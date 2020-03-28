@@ -12,4 +12,4 @@ permalink: /about/
 - Find friends who share same passion in iOS apps security
 
 ### Contact me
-[mov.x0.0x1@gmail.com](mailto:mov.x0.0x1@gmail.com) or [@mov_x0_0x1](https://twitter.com/mov_x0_0x1)
+[mov.x0.0x1@gmail.com](mailto:mov.x0.0x1@gmail.com) or [@ReverseThatApp](https://twitter.com/ReverseThatApp)
