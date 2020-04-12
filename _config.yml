@@ -25,7 +25,7 @@ footer-links:
   email:
   facebook:
   flickr:
-  github: ReverseThatApp/ReverseThatApp.github.io
+  github:
   instagram:
   linkedin:
   pinterest:
@@ -41,7 +41,7 @@ footer-links:
 disqus:
 
 # Enter your Google Analytics web tracking code (e.g. UA-2110908-2) to activate tracking
-google_analytics: UA-154934128-1
+google_analytics: UA-154934128-111
 
 # Your website URL (e.g. http://barryclark.github.io or http://www.barryclark.co)
 # Used for Sitemap.xml and your RSS feed
