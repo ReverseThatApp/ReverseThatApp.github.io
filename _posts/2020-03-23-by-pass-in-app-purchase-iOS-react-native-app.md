@@ -9,7 +9,7 @@ Today we will analysis an react native iOS app and by pass in-app purchase to us
 [![unlocked screen]({{ site.baseurl }}/images/ugp-ios/chord-library-screen.png)]({{ site.baseurl }}/images/ugp-ios/chord-library-screen.png){:target="_blank"} <br/>**AFTER: In-app purchases unlocked contents**<br/><br/>
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. For the demo purpose, I picked up and installed an app on the app store which has In-app purchases feature, please allow me to redact then app name as REDACTED.
+This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. For the demo purpose, I picked up and installed an app on the app store which has In-app purchases feature, please allow me to redact the app name as REDACTED.
 
 ## Prerequisites
 Below tools are used during this post:
