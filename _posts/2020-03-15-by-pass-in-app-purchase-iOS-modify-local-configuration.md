@@ -9,7 +9,7 @@ In this post I will share some tips to analysis and unlock in-app purchase conte
 [![unlocked content]({{ site.baseurl }}/images/wp-ios/in-app-purchase-unlocked-contents.png)]({{ site.baseurl }}/images/wp-ios/in-app-purchase-unlocked-contents.png){:target="_blank"} <br/>**AFTER: In-app purchase unlocked contents**<br/><br/>
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. For the demo purpose, I picked up and installed an app on app store which has In-app purchase feature, please allow me to redact the app name as PATCHABLE.
+This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. We will inspect an app has In-app purchases feature, name PATCHABLE. The figures during the post just for demonstrations, might not relevant to PATCHABLE app.
 
 ## Prerequisites
 Below tools are used during this post:
