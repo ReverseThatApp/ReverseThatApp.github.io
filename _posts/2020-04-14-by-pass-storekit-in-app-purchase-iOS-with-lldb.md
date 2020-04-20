@@ -3,8 +3,8 @@ layout: post
 title: Bypass StoreKit In-app purchases of iOS apps using LLDB
 ---
 
-StoreKit is an iOS framework that supports in-app purchases and interactions with the App Store (rate and review app...). It leverages iOS developers to implement in-app purchases feature with ease. However, most developers just made it work without knowing the best practices, which created flaws for attackers to inspect and defeat In-app purchases feature easily, which means they can use the premium content of the app for FREE. Let's find out what are flaws and how to exploit them using LLDB.
-[![StoreKit In-app Purchases]({{ site.baseurl }}/images/20200414/storekit-flow.png)]({{ site.baseurl }}/images/20200414/storekit-flow.png){:target="_blank"} <br/>**Figure: StoreKit In-app Purchases** *(source: Medium)*<br/><br/>
+StoreKit is an iOS framework that supports in-app purchases and interactions with the App Store (rate and review app...). It leverages iOS developers to implement in-app purchases feature with ease. However, most developers just made it work without knowing the best practices, which created flaws for attackers to inspect and defeat In-app purchases feature easily, which means they can use the premium content of the app for FREE. Let's do some reverse engineering and find out what are flaws and how to exploit them using LLDB.
+[![StoreKit In-app Purchases]({{ site.baseurl }}/images/20200414/storekit-flow.png)]({{ site.baseurl }}/images/20200414/storekit-flow.png){:target="_blank"} <br/>**Figure: StoreKit In-app Purchases flow** *(source: Medium)*<br/><br/>
 
 ## Disclaimer
 This post is for educational purposes only, please use it at your discretion and contact the app's author if you find issues. We will inspect an app name REDACTED. The figures during the post just for demonstrations, might not relevant to REDACTED app.

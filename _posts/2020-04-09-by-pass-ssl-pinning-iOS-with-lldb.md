@@ -3,7 +3,7 @@ layout: post
 title: Bypass SSL Pinning with LLDB in iOS app
 ---
 
-Imagine that you want to inspect the app to see what's information exchange between mobile app and server, you can think about using simple proxy tools to sniff requests and responses or more advanced techniques such as a reverse binary file to see what are endpoints, parameters and response payloads... To starting SSL Pinning bypass series, this post will introduce how to leverage LLDB tools to disable SSL pinning in iOS apps
+Imagine that you want to inspect the app to see what's information exchange between mobile app and server, you can think about using simple proxy tools to sniff requests and responses or more advanced techniques such as a reverse binary file to see what are endpoints, parameters and response payloads... To starting SSL Pinning bypass series, this post will introduce how to leverage LLDB tools to disable SSL pinning in iOS apps and reverse engineering process.
 [![purchase screen]({{ site.baseurl }}/images/br/lldb-attached.png)]({{ site.baseurl }}/images/br/lldb-attached.png){:target="_blank"} <br/>**Figure: LLDB Attached**<br/><br/>
 
 ## Disclaimer
@@ -161,12 +161,14 @@ responses details, MISSION COMPLETED!!!
 ## Final thought
 - SSL Pinning only work with `https` protocol, so to downgrade to `http` requests we can bypass easily
 - REDACTED server supports both `http` and `https` protocol so the app works normally when downgraded to `http`
-- For servers that does not support `http` protocol, this kind SSL Pinning by pass will not work, but we can have our proxy to redirect `http` to `https` so it will work (client send `http` request to proxy -> proxy rewrite `http` to `https` request and send to server)
-- LLDB is very powerful!! Play with registers is an advanced skill we can learn. You can do anything as long as you can attach a debugger into running app.
-- This app doesn't have jailbreak and anti-debug detection, so we can do whatever we want without limitation. If you want to secure the app, you need to think about employing this dectection in your codes.
+- For servers that do not support `http` protocol, this kind SSL Pinning bypass will not work, but we can have our proxy to redirect `http` to `https` so it will work (client send `http` request to proxy -> proxy rewrite `http` to `https` request and send to server)
+- LLDB is very powerful!! Play with registers is an advanced skill we can learn. You can do anything as long as you can attach a debugger into the running app.
+- This app doesn't have jailbreak and anti-debug detection, so we can do whatever we want without limitation. If you want to secure the app, you need to think about employing this detection in your codes.
 
 ## Further readings
 - [Dancing in the Debugger — A Waltz with LLDB](https://www.objc.io/issues/19-debugging/lldb-debugging/)
 - [SSL Pinning in iOS app](https://appinventiv.com/blog/ssl-pinning-in-ios-app/)
 - [Assembly language wiki](https://en.wikipedia.org/wiki/Assembly_language)
 - [ARM architecture](http://en.wikipedia.org/wiki/ARM_architecture)
+
+I posted this on [Medium](https://medium.com/@ReverseThatApp/bypass-ssl-pinning-with-lldb-in-ios-app-b78f9e7cc9cd) also, feel free to clap and share your thoughts if you find it helpful :)
