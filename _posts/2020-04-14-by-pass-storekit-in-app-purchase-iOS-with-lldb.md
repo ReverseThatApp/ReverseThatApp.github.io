@@ -18,9 +18,9 @@ Below tools are used during this post:
 
 ## Overview
 When you install an app from App Store, if it has In-App Purchases feature it will show beside then Install button. Let install REDACTED app on the jailbroken device first and launch the app. For these kinds of app, it will provide you some contents for Free and some contents require to purchase, which will show Apple purchase popup.
-[![In-app purchases features]({{ site.baseurl }}/images/20200414/main-screen-locked.png)]({{ site.baseurl }}/images/20200414/main-screen-locked.png){:target="_blank"} <br/>**Figure 1: In-app purchases features**<br/><br/>
+[![In-app purchases features]({{ site.baseurl }}/images/20200414/sample-inapp-purchases-features.png)]({{ site.baseurl }}/images/20200414/sample-inapp-purchases-features.png){:target="_blank"} <br/>**Figure 1: Sample In-app purchases features** *(source: developer.apple.com)*<br/><br/>
 
-Tap on some locked items, you will be asked for purchasing and showing Apple In-app purchases popup, might be like this:
+Tap on one of the items, you will be asked for purchasing and showing Apple In-app purchases popup, might be like this:
 
 [![In-app purchases popup]({{ site.baseurl }}/images/20200414/in-app-purchases-popup.png)]({{ site.baseurl }}/images/20200414/in-app-purchases-popup.png){:target="_blank"} <br/>**Figure 2: In-app purchases native popup**<br/><br/>
 
@@ -345,7 +345,7 @@ Let resume the app to see if it can unlock all items.
 (lldb) continue
 ```
 
-You might see the app hits the breakpoint again, but just `continue` again to ignore it and resume the app. After this, the app can continue to run as normal flow and all items are unlocked, which also means we bypassed StoreKit In-app purchases feature. MISSION COMPLETED!!
+You might see the app hits the breakpoint again, but just `continue` again to ignore it and resume the app. After this, the app can continue to run as normal flow and the premium features you purchased are unlocked, which also means we bypassed StoreKit In-app purchases feature. MISSION COMPLETED!!
 
 ## But WAIT!! Does this mean all In-app purchases apps can be bypassed like this?
 The answer is NO! Apple has a mechanism to validate if the user has purchased the item or not using receipts. This is StoreKit best practice and highly recommended for all developers when working with In-app purchases feature. The only problem is that it's required efforts to implement, so be often ignored by developers. However, even with these extra efforts for receipt validation to enhance In-app purchases security, attackers can reverse the app and patch it to bypass again. I will put the reference links for further reading about receipt validation and suggestion to secure reverse process.
