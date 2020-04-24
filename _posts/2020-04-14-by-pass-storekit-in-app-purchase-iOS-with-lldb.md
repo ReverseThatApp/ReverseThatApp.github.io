@@ -22,7 +22,7 @@ When you install an app from App Store, if it has In-App Purchases feature it wi
 
 Tap on one of the items, you will be asked for purchasing and showing Apple In-app purchases popup, might be like this:
 
-[![In-app purchases popup]({{ site.baseurl }}/images/20200414/in-app-purchases-popup.png)]({{ site.baseurl }}/images/20200414/in-app-purchases-popup.png){:target="_blank"} <br/>**Figure 2: In-app purchases native popup**<br/><br/>
+[![In-app purchases popup]({{ site.baseurl }}/images/20200414/native-in-app-purchases-popup.png)]({{ site.baseurl }}/images/20200414/native-in-app-purchases-popup.png){:target="_blank"} <br/>**Figure 2: In-app purchases native popup**<br/><br/>
 
 Let's do some analysis ^_^
 
