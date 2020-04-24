@@ -249,7 +249,7 @@ Before examining registers, let set a breakpoint first. Go back to Hopper Disass
 ```assembly
 (lldb) breakpoint set --address 0x100038000
 warning: failed to set breakpoint site at 0x100038000 for breakpoint 1.1: error: 0 sending the breakpoint request
-Breakpoint 1: address: 0x0x100038000
+Breakpoint 1: address: 0x100038000
 ```
 **Figure 15: LLDB set breakpoint failed**
 
@@ -314,7 +314,7 @@ You can see the process stopped at our breakpoint (at address `0x1045F4000`) at 
 ```
 **Figure 19: Instructions explanation**
 
-I put comment for those instructions, the `add x2, x2, #0x170` can be translated as `x2 = x2 + #0x170 = #0x1019c5000 + #0x170 = 0x1019c5170`, this is the address of `https://redacted-backend.redacted.com` (you can look back above **Figure 4**) and Hopper Disassembler is smart enough to find out and put comment at the end of this instruction. So after executing this instruction, we expect value of x2 is `https://redacted-backend.redacted.com`. Let type `next` or `n` then enter to execute this instruction.
+I put comment for those instructions, the `add x2, x2, #0x170` can be translated as `x2 = x2 + #0x170 = #0x1019c5000 + #0x170 = 0x1019c5170`, this is the address of `https://redacted-backend.redacted.com/` (you can look back above **Figure 4**) and Hopper Disassembler is smart enough to find out and put comment at the end of this instruction. So after executing this instruction, we expect value of x2 is `https://redacted-backend.redacted.com/`. Let type `next` or `n` then enter to execute this instruction.
 
 Now to check value of register `x2`, you can type `po $x2` (po is print object) or `register read x2`, you will see register `x2` now holding address that contains string `https://redacted-backend.redacted.com/`
 ```bashscript
