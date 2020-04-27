@@ -3,7 +3,7 @@ layout: post
 title: Bypass StoreKit In-app purchases of iOS apps using LLDB
 ---
 
-StoreKit is an iOS framework that supports in-app purchases and interactions with the App Store (rate and review app...). It leverages iOS developers to implement in-app purchases feature with ease. However, most developers just made it work without knowing the best practices, which created flaws for attackers to inspect and defeat In-app purchases feature easily, which means they can use the premium content of the app for FREE. Let's do some reverse engineering and find out what are flaws and how to exploit them using LLDB.
+In this post, we will do some reverse engineering an app using StoreKit framework and bypass In-app purchase features. StoreKit is an iOS framework that supports in-app purchases and interactions with the App Store (rate and review app...). It leverages iOS developers to implement in-app purchases feature with ease. However, most developers just made it work without knowing the best practices, which created flaws for attackers to inspect and defeat In-app purchases feature easily, which means they can use the premium content of the app for FREE. Let's do some reverse engineering and find out what are flaws and how to exploit them using LLDB.
 [![StoreKit In-app Purchases]({{ site.baseurl }}/images/20200414/storekit-flow.png)]({{ site.baseurl }}/images/20200414/storekit-flow.png){:target="_blank"} <br/>**Figure: StoreKit In-app Purchases flow** *(source: Medium)*<br/><br/>
 
 ## Disclaimer
@@ -14,10 +14,10 @@ Below tools are used during this post:
 - A jailbroken device.
 - [Hopper Disassembler](https://www.hopperapp.com/download.html)
 - [Setup LLDB environment](https://kov4l3nko.github.io/blog/2016-04-27-debugging-ios-binaries-with-lldb/)
-- A bit knowledge of assembly arm64, refer previous [post]({{ site.baseurl }}/by-pass-ssl-pinning-iOS-with-lldb/){:target="_blank"}
+- A bit knowledge of assembly arm64, please read my previous [post]({{ site.baseurl }}/by-pass-ssl-pinning-iOS-with-lldb/){:target="_blank"}
 
 ## Overview
-When you install an app from App Store, if it has In-App Purchases feature it will show beside then Install button. Let install REDACTED app on the jailbroken device first and launch the app. For these kinds of app, it will provide you some contents for Free and some contents require to purchase, which will show Apple purchase popup.
+When you install an app from App Store, if it has In-App Purchases feature it will show beside then Install button. Let install REDACTED app on the jailbroken device first and launch the app. For these kinds of app, it will provide you some contents for Free and some content require to purchase, which will show Apple purchase popup.
 [![In-app purchases features]({{ site.baseurl }}/images/20200414/sample-inapp-purchases-features.png)]({{ site.baseurl }}/images/20200414/sample-inapp-purchases-features.png){:target="_blank"} <br/>**Figure 1: Sample In-app purchases features** *(source: developer.apple.com)*<br/><br/>
 
 Tap on one of the items, you will be asked for purchasing and showing Apple In-app purchases popup, might be like this:
@@ -31,7 +31,7 @@ Let's do some analysis ^_^
 With the help of [Frida iOS Dump](https://github.com/AloneMonkey/frida-ios-dump){:target="_blank"} or [CrackerXI](https://forum.iphonecake.com/index.php?/topic/363020-crackerxi-gui-app-decryption-tool-for-ios-11-12-13/){:target="_blank"}, we can easily pull out **.ipa** file of REDACTED app on a jailbroken device, unzip **.ipa** and navigate to `Payload/REDACTED.app` folder. All of the app resources and binary files are inside this folder.
 [![.ipa resources]({{ site.baseurl }}/images/20200414/ipa-resources.png)]({{ site.baseurl }}/images/20200414/ipa-resources.png){:target="_blank"} <br/>**Figure 3: .ipa resources**<br/><br/>
 
-Besides common resources you will see in other .ipa files, this one has a bit different. Look for `spine-lua`, `CoronaResources.bundle`, `resource.corona-archive`, it's CORONA!!! Don't get goosebumps please, this is not the kind of Corona virus but Corona framework. [Corona](https://coronalabs.com/) is the 2D game engine, a cross-platform framework ideal for rapidly creating apps and games for mobile devices and desktop systems. That means you can create your project once and publish it to multiple types of devices, including Apple iPhone and iPad, Android phones and tablets, Amazon Fire, Mac Desktop, Windows Desktop, and even connected TVs such as Apple TV, Fire TV, and Android TV (from [coronalabs site](ttps://coronalabs.com/)). I will have another post to share the process of reversing Corona files soon, just leave these kinds of stuff for now.
+Besides common resources you will see in other .ipa files, this one has a bit different. Look for `spine-lua`, `CoronaResources.bundle`, `resource.corona-archive`, it's CORONA!!! Don't get goosebumps please, this is not the kind of Coronavirus but Corona framework. [Corona](https://coronalabs.com/) is the 2D game engine, a cross-platform framework ideal for rapidly creating apps and games for mobile devices and desktop systems. That means you can create your project once and publish it to multiple types of devices, including Apple iPhone and iPad, Android phones and tablets, Amazon Fire, Mac Desktop, Windows Desktop, and even connected TVs such as Apple TV, Fire TV, and Android TV (from [coronalabs site](ttps://coronalabs.com/)). I will have another post to share the process of reversing Corona files soon, just leave these kinds of stuff for now.
 
 Let's scan through files inside this folder and stop at REDACTED Mach-O file, it's very small in size - **ONLY 2MB**. That means all of the app logic will remain in those Corona files. You might wonder if the In-app purchase there also? It would be, but in the end the purchase process should be in native iOS and the REDACTED file. Let's examine this guy right away.
 
@@ -45,14 +45,14 @@ updatedTransactions transactions: [SKPaymentTransaction])`, click on this [metho
 
 > Once a transaction is processed, it should be removed from the payment queue by calling the payment queue’s `finishTransaction(_:)` method, passing the transaction as a parameter.
 
-As the above statement, if `transactionState` is `SKPaymentTransactionStatePurchased`, payment was successfully received for the desired functionality and app should make the functionality available to the user, for this case, it might unlock all items. So if we can change the value of `transactionState` into `SKPaymentTransactionStatePurchased`, it's possible to unlock the app. Let's hunt for this.
+As the above statement, if `transactionState` is `SKPaymentTransactionStatePurchased`, payment was successfully received for the desired functionality, and the app should make the functionality available to the user, for this case, it might unlock all items. So if we can change the value of `transactionState` into `SKPaymentTransactionStatePurchased`, it's possible to unlock the app. Let's hunt for this.
 
 We know the method name to look for - `func paymentQueue(_ queue: SKPaymentQueue, 
-updatedTransactions transactions: [SKPaymentTransaction])`, but if you look for this string in Hopper Disassembler, it won't spit out any matches. The reason is it's not a selector, so we need to search by selector name of this method, with could be `paymentQueue:updatedTransactions:`. Switch to Hopper and search this selector name in **Labels** tab, we can see one result matches `-[AppleStoreManager paymentQueue:updatedTransactions:]:`, which also mean class `AppleStoreManager` is the one conforms to `SKPaymentTransactionObserver` protocol and handle transactions.
+updatedTransactions transactions: [SKPaymentTransaction])`, but if you look for this string in Hopper Disassembler, it won't spit out any matches. The reason is it's not a selector, so we need to search by selector name of this method, which could be `paymentQueue:updatedTransactions:`. Switch to Hopper and search this selector name in **Labels** tab, we can see one result matches `-[AppleStoreManager paymentQueue:updatedTransactions:]:`, which also mean class `AppleStoreManager` is the one conforms to `SKPaymentTransactionObserver` protocol and handle transactions.
 [![paymentQueue:updatedTransactions: implementation]({{ site.baseurl }}/images/20200414/search-paymentQueue-updatedTransactions.png)]({{ site.baseurl }}/images/20200414/search-paymentQueue-updatedTransactions.png){:target="_blank"} <br/>**Figure 4: paymentQueue:updatedTransactions: implementation**<br/><br/>
 
-### It's ARM64 again, let's swallow it
-Let's take another oppotunity to learn ARM64 this time, I hope you dont quit this post for now. Let toggle CFG (Control Flow Graph) mode to see what this method is doing easier. Don't panic, it would be simple to understand.
+### It's ARM64 again, let's swallow it 🥱
+Let's take another opportunity to learn ARM64 this time, I hope you don't quit this post for now. Let toggle CFG (Control Flow Graph) mode to see what this method is doing easier. Don't panic, it would be simple to understand.
 [![paymentQueue:updatedTransactions: implementation]({{ site.baseurl }}/images/20200414/paymentQueue-updatedTransactions-CFG.png)]({{ site.baseurl }}/images/20200414/paymentQueue-updatedTransactions-CFG.png){:target="_blank"} <br/>**Figure 5: paymentQueue:updatedTransactions: implementation CFG mode**<br/><br/>
 
 Let read through from top to bottom, we won't need to understand all assembly instructions but focus on the important ones. Let's understand flow from **Block 1** -> **Block 6** will do.
@@ -215,7 +215,7 @@ And the result of `objc_msgSend(transaction, @selector(transactionState))` will 
 Next instruction `cmp  x0, #0x3` will compare `transactionState` with `#0x3` (3 in decimal) to decide which location to branch in next instruction `b.eq  loc_10000dee0`. It would make sense here to compare `SKPaymentTransactionState` type with number `3` because `SKPaymentTransactionState` is `enum` type and will use its raw value to compare with `3`.
 [![SKPaymentTransactionState-enum]({{ site.baseurl }}/images/20200414/SKPaymentTransactionState-enum.png)]({{ site.baseurl }}/images/20200414/SKPaymentTransactionState-enum.png){:target="_blank"} <br/>**Figure 6: SKPaymentTransactionState enum**<br/><br/>
 
-From Apple implementation, `SKPaymentTransactionState` does not explicitly assign a raw value for each case, so the implicit value for each case is one more than the previous case. Because first case `purchasing` doesn’t have a value set, its value is 0. It would be same like this:
+From Apple implementation, `SKPaymentTransactionState` does not explicitly assign a raw value for each case, so the implicit value for each case is one more than the previous case. Because the first case `purchasing` doesn’t have a value set, its value is 0. It would be same as this:
 ```Swift
 public enum SKPaymentTransactionState : Int {    
     case purchasing = 0
@@ -248,7 +248,7 @@ Waiting for debugger instructions for process 0.
 ```
 
 ### Attach LLDB into app process
-Open another tab on Terminal app and launch `lldb`, for my case it will auto attach into remote `debugserver` as I put some config in `~/.lldbinit` file. You can read my [previous post]({{ site.baseurl }}/by-pass-ssl-pinning-iOS-with-lldb/#launch-lldb){:target="_blank"} how to do that.
+Open another tab on Terminal app and launch `lldb`, for my case it will auto attach into remote `debugserver` as I put some config in `~/.lldbinit` file. You can read my [previous post]({{ site.baseurl }}/by-pass-ssl-pinning-iOS-with-lldb/#launch-lldb){:target="_blank"} on how to do that.
 ```bashscript
  MBP:~ lldb
   Platform: remote-ios
@@ -295,10 +295,10 @@ Process 29446 stopped
 * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
     frame #0: 0x0000000102801eac REDACTED`___lldb_unnamed_symbol223$$REDACTED + 196
 REDACTED`___lldb_unnamed_symbol223$$REDACTED:
-->  0x102801eac <+196>: bl     0x10294924c               ; symbol stub for: objc_msgSend
-    0x102801eb0 <+200>: cmp    x0, #0x3                  ; =0x3
-    0x102801eb4 <+204>: b.eq   0x102801ee0               ; <+248>
-    0x102801eb8 <+208>: cmp    x0, #0x2                  ; =0x2
+->  0x102801eac <+196>: bl     0x10294924c  ; symbol stub for: objc_msgSend
+    0x102801eb0 <+200>: cmp    x0, #0x3     ; =0x3
+    0x102801eb4 <+204>: b.eq   0x102801ee0  ; <+248>
+    0x102801eb8 <+208>: cmp    x0, #0x2     ; =0x2
 Target 0: (REDACTED) stopped.
 ```
 
@@ -314,7 +314,7 @@ YEAH!! Register `x0` is holding address of object `SKPaymentTransaction`. Let's 
 0
 ```
 
-Raw value `0` means it's `.purchasing` state (raw value is `0`), let modified it to `.purchased`. But we got problem here that `transactionState` property only allows getter without setter. However, `SKPaymentTransaction` extends `NSObject` which provides default implementation of the key-value coding protocol methods, so we can use `setValue:forKey:` selector to set value for `transactionState` property to `.purchased` (raw value is `1`), let's try:
+Raw value `0` means it's `.purchasing` state (raw value is `0`), let modified it to `.purchased`. But we got a problem here that `transactionState` property only allows getter without setter. However, `SKPaymentTransaction` extends `NSObject` which provides a default implementation of the key-value coding protocol methods, so we can use `setValue:forKey:` selector to set value for `transactionState` property to `.purchased` (raw value is `1`), let's try:
 ```bashscript
 (lldb) po [0x1c00170f0 setValue:[NSNumber numberWithInteger:1] forKey:@"transactionState"]
 <SKPaymentTransaction: 0x1c00170f0>
@@ -348,13 +348,13 @@ Let resume the app to see if it can unlock all items.
 You might see the app hits the breakpoint again, but just `continue` again to ignore it and resume the app. After this, the app can continue to run as normal flow and the premium features you purchased are unlocked, which also means we bypassed StoreKit In-app purchases feature. MISSION COMPLETED!!
 
 ## But WAIT!! Does this mean all In-app purchases apps can be bypassed like this?
-The answer is NO! Apple has a mechanism to validate if the user has purchased the item or not using receipts. This is StoreKit best practice and highly recommended for all developers when working with In-app purchases feature. The only problem is that it's required efforts to implement, so be often ignored by developers. However, even with these extra efforts for receipt validation to enhance In-app purchases security, attackers can reverse the app and patch it to bypass again. I will put the reference links for further reading about receipt validation and suggestion to secure reverse process.
+The answer is NO! Apple has a mechanism to validate if the user has purchased the item or not using receipts. This is StoreKit best practice and highly recommended for all developers when working with In-app purchases feature. The only problem is that it's required efforts to implement, so be often ignored by developers. However, even with these extra efforts for receipt validation to enhance In-app purchases security, attackers can reverse the app and patch it to bypass again. I will put the reference links for further reading about receipt validation and suggestion to secure the reverse process.
 
 ## Final thoughts
 - Again, LLDB is a powerful tool to debug and understand all states of the app.
 - An app without anti-debug is vulnerable.
 - StoreKit is fast to integrate with Apple In-app purchase feature but if we implement it incorrectly it will create a flaw for attackers to access your premium content without paying anything, your revenue will be affected (attackers can develop tweaks, patch the binary and release to everyone)
-- This bypass technique is the same that most tweaks on Cydia are using.
+- This bypass technique is the same as most tweaks on Cydia are using.
 
 ## Further readings
 - [Receipt validation](https://www.objc.io/issues/17-security/receipt-validation/)

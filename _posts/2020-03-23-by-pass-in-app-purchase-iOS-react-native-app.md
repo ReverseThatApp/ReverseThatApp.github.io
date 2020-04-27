@@ -3,10 +3,8 @@ layout: post
 title: Bypass In-app purchases of react native iOS app
 ---
 
-Today we will analysis an react native iOS app and by pass in-app purchase to use locked features. Below is an example of purchase screen whenever tap on premium content.
-[![purchase screen]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png)]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png){:target="_blank"} <br/>**BEFORE: In-app purchases locked contents**<br/><br/>
-
-[![unlocked screen]({{ site.baseurl }}/images/ugp-ios/chord-library-screen.png)]({{ site.baseurl }}/images/ugp-ios/chord-library-screen.png){:target="_blank"} <br/>**AFTER: In-app purchases unlocked contents**<br/><br/>
+Today we will reverse engineering a react native iOS app and bypass in-app purchase to use locked features. Below is an example of purchase screen whenever tap on premium content.
+[![purchase screen]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png)]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png){:target="_blank"} <br/>**Figure: Sample In-app purchases locked contents**<br/><br/>
 
 ## Disclaimer
 This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. We will inspect an app has In-app purchases feature, name REDACTED. The figures during the post just for demonstrations, might not relevant to REDACTED app.
@@ -19,8 +17,6 @@ Below tools are used during this post:
 
 ## Overview
 After installing and launching REDACTED app on the device, it shows me the main screen which some navigation items on the tab-bar menu. Select one of the items, let say *Tools* lead me to a new screen which allows me to select tools app supports. Select either tool will navigate to a new screen that allows us to see that tool for a second followed by a purchase screen.
-
-![locked chord library tool](https://thumbs.gfycat.com/UniqueAmazingGrison-size_restricted.gif) <br/>**Figure 1: Chord library tool require In-app purchases**<br/><br/>
 
 The only option we have is to subscribe and do In-app purchases, otherwise, click **X** button to cancel purchase will pop us back to *Tools* screen again. We nearly can use that tool but it's blocked in front of our eyes. However, this seems to be client-side validation, if we can find out where is logic to show purchase screen and disable that, we can get rid of it and use the tool for free. Let's do it ^_^
 
@@ -78,9 +74,7 @@ Now the job is trivial by replacing `hasProAccount = true` for all 3 places:
 
 Then copy modified main.jsbundle to overwrite the one in the jailbroken device by below command:
 `scp main.jsbundle root@iphone_ip:/private/var/containers/Bundle/Application/REDACTED_UUID/REDACTED.app/main.jsbundle`
-Relaunch the app, BOOM!!! No more in-app purchases screen.
-
-![unlocked chord library tool](https://thumbs.gfycat.com/RawBronzeAracari-size_restricted.gif) <br/>**Figure 8: Chord library unlocked**<br/><br/>
+Relaunch the app, BOOM!!! No more in-app purchases screen, even ads is gone too, so one stone two birds yeah!!!
 
 ## Final thought
 - The client-side should show a purchase screen first instead of a content screen followed by. This would hide the feeling that premium content already been on the client but blocked by another purchase screen, try to get rid of purchase screen means can use the app.
