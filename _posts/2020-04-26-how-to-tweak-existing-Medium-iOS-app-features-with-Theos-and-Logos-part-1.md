@@ -76,7 +76,7 @@ After Tweak creation process is done, a new folder `mediumenhanceclapstweak` wil
 - control: Tweak information
 - Makefile: for automated compilation
 - mediumenhanceclapstweak.plist: Define which bundle id that this Tweak can hook
-- Tweak.xm: Your tweak functionality will be implemented here (sometime it will generate Tweak.x instead, this is C++ file template)
+- Tweak.xm: Your tweak functionality will be implemented here
 ```
 
 ### Which classes and methods to hook?
@@ -251,3 +251,4 @@ We can say our tweak worked, but not as expected, we need to fix that, but I see
 
 ## Further readings
 - [Logos syntax](http://iphonedevwiki.net/index.php/Logos){:target="_blank"}
+- [Compile issue](https://github.com/theos/theos/issues/324){:target="_blank"}
