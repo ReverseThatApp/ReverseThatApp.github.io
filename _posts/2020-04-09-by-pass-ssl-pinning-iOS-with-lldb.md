@@ -12,10 +12,10 @@ This post is for educational purposes only, please use it at your discretion and
 ## Prerequisites
 Below tools are used during this post:
 - A jailbroken device.
-- [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html)
-- [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp)
-- [Hopper Disassembler](https://www.hopperapp.com/download.html)
-- [Setup LLDB environment](https://kov4l3nko.github.io/blog/2016-04-27-debugging-ios-binaries-with-lldb/)
+- [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html){:target="_blank"}
+- [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp){:target="_blank"}
+- [Hopper Disassembler](https://www.hopperapp.com/download.html){:target="_blank"}
+- [Setup LLDB environment](https://kov4l3nko.github.io/{:target="_blank"}blog/2016-04-27-debugging-ios-binaries-with-lldb/){:target="_blank"}
 
 ## Overview
 We want to know how REDACTED app exchange info with server, so let pick up Burp Suite as proxy tool to sniff requests. Launch Burp Suite and do some necessary setup as Prerequisites section.

@@ -12,8 +12,8 @@ This post is for educational purposes only, please use it at your discretion and
 ## Prerequisites
 Below tools are used during this post:
 - A jailbroken device.
-- [Beautify Code](https://beautifier.io/)
-- [JS Nice](http://jsnice.org/)
+- [Beautify Code](https://beautifier.io/){:target="_blank"}
+- [JS Nice](http://jsnice.org/){:target="_blank"}
 
 ## Overview
 After installing and launching REDACTED app on the device, it shows me the main screen which some navigation items on the tab-bar menu. Select one of the items, let say *Tools* lead me to a new screen which allows me to select tools app supports. Select either tool will navigate to a new screen that allows us to see that tool for a second followed by a purchase screen.

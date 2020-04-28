@@ -13,10 +13,10 @@ This post is for educational purposes only, please use it at your discretion and
 
 ## Prerequisites
 Below tools are used during this post:
-- [Download Burp Suite Community Edition](https://portswigger.net/burp/communitydownload)
-- [Install EWA: Learn English & Spanish](https://apps.apple.com/us/app/ewa-learn-english-spanish/id1200778841)
-- [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html)
-- [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp)
+- [Download Burp Suite Community Edition](https://portswigger.net/burp/communitydownload){:target="_blank"}
+- [Install EWA: Learn English & Spanish](https://apps.apple.com/us/app/ewa-learn-english-spanish/id1200778841){:target="_blank"}
+- [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html){:target="_blank"}
+- [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp){:target="_blank"}
 
 ## Overview
 - Install and launch the app from App Store and landing to Courses screen then tap on _350 Spanish words_ card, we can see this app provides some free lessons (with star icon) and premium lessons (with lock icon).

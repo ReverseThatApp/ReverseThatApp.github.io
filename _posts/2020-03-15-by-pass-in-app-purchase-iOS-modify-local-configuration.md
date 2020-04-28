@@ -11,12 +11,12 @@ This post is for educational purposes only, please use it at your discretion and
 
 ## Prerequisites
 Below tools are used during this post:
-- [Burp Suite Community Edition](https://portswigger.net/burp/communitydownload)
-- [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html)
-- [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp)
-- [Hopper Disassembler](https://www.hopperapp.com/download.html)
+- [Burp Suite Community Edition](https://portswigger.net/burp/communitydownload){:target="_blank"}
+- [Installing Burp's CA Certificate in an iOS Device](https://support.portswigger.net/customer/portal/articles/1841109-Mobile%20Set-up_iOS%20Device%20-%20Installing%20CA%20Certificate.html){:target="_blank"}
+- [Configuring an iOS Device to Work With Burp](https://support.portswigger.net/customer/portal/articles/1841108-configuring-an-ios-device-to-work-with-burp){:target="_blank"}
+- [Hopper Disassembler](https://www.hopperapp.com/download.html){:target="_blank"}
 - A jailbroken device. This is needed to modify app sandbox data after installation.
-- [SourceTree](https://www.sourcetreeapp.com/)
+- [SourceTree](https://www.sourcetreeapp.com/){:target="_blank"}
 
 ## Overview
 After installing and launching PATCHABLE app on jailbreak device, it shows me a screen with many selectable cards that can be differentiated on UI between free content cards and in-app purchase ones (with/without top-left lock icon). For the free cards, the selection will open content and ready to use, however, locked cards will show a dialog asking for In-app purchase to unlock full bundle.

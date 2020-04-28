@@ -3,7 +3,7 @@ layout: post
 title: Bypass StoreKit In-app purchases of iOS apps using LLDB
 ---
 
-In this post, we will do some reverse engineering an app using StoreKit framework and bypass In-app purchase features. StoreKit is an iOS framework that supports in-app purchases and interactions with the App Store (rate and review app...). It leverages iOS developers to implement in-app purchases feature with ease. However, most developers just made it work without knowing the best practices, which created flaws for attackers to inspect and defeat In-app purchases feature easily, which means they can use the premium content of the app for FREE. Let's do some reverse engineering and find out what are flaws and how to exploit them using LLDB.
+In this post, we will reverse engineering an app using StoreKit framework and bypass In-app purchase features. StoreKit is an iOS framework that supports in-app purchases and interactions with the App Store (rate and review app...). It leverages iOS developers to implement in-app purchases feature with ease. However, most developers just made it work without knowing the best practices, which created flaws for attackers to inspect and defeat In-app purchases feature easily, which means they can use the premium content of the app for FREE. Let's do some reverse engineering and find out what are flaws and how to exploit them using LLDB.
 [![StoreKit In-app Purchases]({{ site.baseurl }}/images/20200414/storekit-flow.png)]({{ site.baseurl }}/images/20200414/storekit-flow.png){:target="_blank"} <br/>**Figure: StoreKit In-app Purchases flow** *(source: Medium)*<br/><br/>
 
 ## Disclaimer
@@ -12,8 +12,8 @@ This post is for educational purposes only, please use it at your discretion and
 ## Prerequisites
 Below tools are used during this post:
 - A jailbroken device.
-- [Hopper Disassembler](https://www.hopperapp.com/download.html)
-- [Setup LLDB environment](https://kov4l3nko.github.io/blog/2016-04-27-debugging-ios-binaries-with-lldb/)
+- [Hopper Disassembler](https://www.hopperapp.com/download.html){:target="_blank"}
+- [Setup LLDB environment](https://kov4l3nko.github.io/{:target="_blank"}blog/2016-04-27-debugging-ios-binaries-with-lldb/){:target="_blank"}
 - A bit knowledge of assembly arm64, please read my previous [post]({{ site.baseurl }}/by-pass-ssl-pinning-iOS-with-lldb/){:target="_blank"}
 
 ## Overview
@@ -357,5 +357,5 @@ The answer is NO! Apple has a mechanism to validate if the user has purchased th
 - This bypass technique is the same as most tweaks on Cydia are using.
 
 ## Further readings
-- [Receipt validation](https://www.objc.io/issues/17-security/receipt-validation/)
-- [WWDC](https://developer.apple.com/videos/play/wwdc2018/704/)
+- [Receipt validation](https://www.objc.io/issues/17-security/receipt-validation/){:target="_blank"}
+- [WWDC](https://developer.apple.com/videos/play/wwdc2018/704/){:target="_blank"}
