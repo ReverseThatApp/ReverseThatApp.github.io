@@ -3,7 +3,18 @@ layout: custom
 ---
 
 <div class="posts">
+  <!-- store total posts count into total_posts -->
+  <!-- {% capture total_posts %} {{ site.posts | size }} {% endcapture %} -->
+  {% assign total_posts = site.posts | size %}
+
   {% for post in site.posts %}
+    <!-- post index is 1-based not 0-based -->    
+    
+    <!-- Not add <br/> for first post -->
+    {% if forloop.index > 1 %}
+    <br/>
+    {% endif %}
+    
     <article class="post">
 
       <h1><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h1>
@@ -13,7 +24,12 @@ layout: custom
         {{ post.excerpt }}
       </div>
 
-      <a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read More</a>
-    </article>
+      <a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read More</a>      
+    </article>    
+
+    <!-- not add hr for last post -->
+    {% if forloop.index != total_posts %}
+    <hr>
+    {% endif %}
   {% endfor %}
 </div>

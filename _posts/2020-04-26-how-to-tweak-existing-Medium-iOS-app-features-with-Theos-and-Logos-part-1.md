@@ -213,13 +213,14 @@ Here you go, the hooking function is working with an extra log. We're now confid
 
 %hook ClapButton
 
+int numberOfClaps = 4;
+
 -(void)clapButtonPressed:(id)arg2 {
   %log; // log method name and argument, you will find this log in `Console` app
-  for (int i = 0; i < 4; i++) {      
+  for (int i = 0; i < numberOfClaps; i++) {      
       %orig; // invoke original method
       [self clapButtonReleased:arg2]; // simulate release click     
-  }
-  %orig; 
+  }  
 }
 
 -(void)clapButtonReleased:(id)arg2 {
@@ -236,9 +237,9 @@ Tweak.xm:89:7: error: receiver type 'ClapButton' for instance message is a forwa
 [self clapButtonReleased:arg2];
 ```
 
-Now let compile and install it again. IT'S JUST WORKED 😂😂😂!!! But something is wrong, instead of +4 claps, it is +5 instead. What's wrong!!! From the code we call `clapButtonPressed` and `clapButtonReleased` 4 times each, check the log we see that `clapButtonPressed` appears 4 times but `clapButtonReleased` appears 5 times. The only explanation for this is that `clapButtonReleased` is invoked in the original `clapButtonPressed` method, so it counts as +5 claps instead.
+Now let compile and install it again. IT'S JUST WORKED 😂😂😂!!! But we manage to call `clapButtonReleased` manually looks like not a good way, some time calling a method without knowing what it's doing is dangerous and might cause side effect. We will reverse engineering these methods in the next post too see if can find other methods to hook instead.
 
-We can say our tweak worked, but not as expected, we need to fix that, but I see the post is too long so we will cover how to fix this problem in my next post. Another problem is that if we want to change the number of claps to other numbers, modify the code and install again is quite cumbersome, we need to find a way to allow users to configure the number as they want without modifying the source code. Also we will talk about how to deploy and share our tweak to others, all will be covered in the next post, so stay tuned!!! 😍😍😍
+I see the post is too long so we will cover other things in my next post. There is a problem, however, if we want to change the number of claps to other numbers, modify the code and install again is quite cumbersome, we need to find a way to allow users to configure the number as they want to without modifying the source code and we will talk about how to deploy and share our tweak to others, all will be covered in the next post, so stay tuned!!! 😍😍😍
 
 
 ## Final thoughts
@@ -250,5 +251,6 @@ We can say our tweak worked, but not as expected, we need to fix that, but I see
 
 
 ## Further readings
+- [Theos](http://iphonedevwiki.net/index.php/Theos)
 - [Logos syntax](http://iphonedevwiki.net/index.php/Logos){:target="_blank"}
 - [Compile issue](https://github.com/theos/theos/issues/324){:target="_blank"}
