@@ -237,7 +237,7 @@ Tweak.xm:89:7: error: receiver type 'ClapButton' for instance message is a forwa
 [self clapButtonReleased:arg2];
 ```
 
-Now let compile and install it again. IT'S JUST WORKED 😂😂😂!!! But we manage to call `clapButtonReleased` manually looks like not a good way, some time calling a method without knowing what it's doing is dangerous and might cause side effect. We will reverse engineering these methods in the next post too see if can find other methods to hook instead.
+Now let compile and install it again. IT’S JUST WORKED 😂😂😂!!! But we manage to call `clapButtonReleased` manually looks like not a good way, sometimes calling a method without knowing what it’s doing is dangerous and might cause side effects. Are you curious about how they handle single tap and press action? We will reverse engineering these methods in the next post to see what did they do and find other methods to hook instead.
 
 I see the post is too long so we will cover other things in my next post. There is a problem, however, if we want to change the number of claps to other numbers, modify the code and install again is quite cumbersome, we need to find a way to allow users to configure the number as they want to without modifying the source code and we will talk about how to deploy and share our tweak to others, all will be covered in the next post, so stay tuned!!! 😍😍😍
 
@@ -251,6 +251,6 @@ I see the post is too long so we will cover other things in my next post. There 
 
 
 ## Further readings
-- [Theos](http://iphonedevwiki.net/index.php/Theos)
+- [Theos](http://iphonedevwiki.net/index.php/Theos){:target="_blank"}
 - [Logos syntax](http://iphonedevwiki.net/index.php/Logos){:target="_blank"}
 - [Compile issue](https://github.com/theos/theos/issues/324){:target="_blank"}

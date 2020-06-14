@@ -19,6 +19,9 @@ avatar: https://raw.githubusercontent.com/barryclark/jekyll-now/master/images/je
 # Flags below are optional
 #
 
+# The post's date is in the future, set true to make it visible
+future: true
+
 # Includes an icon in the footer for each username you enter
 footer-links:
   dribbble:
@@ -46,7 +49,7 @@ google_analytics: UA-154934128-1
 
 # Your website URL (e.g. http://barryclark.github.io or http://www.barryclark.co)
 # Used for Sitemap.xml and your RSS feed
-url:
+url: https://reversethatapp.github.io/
 
 # If you're hosting your site at a Project repository on GitHub pages
 # (http://yourusername.github.io/repository-name)
