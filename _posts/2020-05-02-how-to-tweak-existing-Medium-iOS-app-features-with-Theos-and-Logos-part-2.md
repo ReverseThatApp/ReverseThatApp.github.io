@@ -3,7 +3,7 @@ layout: post
 title: How to tweak existing Medium iOS app features with Theos & Logos - part 2
 ---
 
-In this post we will continue to enhance **Medium** tweak. We will learn how to create preference bundle and hook in to Settings.app to configure default claps. If you have not read [part 1]({{ site.baseurl }}/how-to-tweak-existing-Medium-iOS-app-features-with-Theos-and-Logos-part-1){:target="_blank"} yet, I suggest to have a look first before continuing.
+In this post we will continue to enhance **Medium** tweak. We will learn how to create a preference bundle and hook into Settings.app to configure default claps. If you have not read [part 1]({{ site.baseurl }}/how-to-tweak-existing-Medium-iOS-app-features-with-Theos-and-Logos-part-1){:target="_blank"} yet, I suggest to have a look first before continuing.
 [![Medium Tweak Preference]({{ site.baseurl }}/images/20200502/final-medium-tweak.png)]({{ site.baseurl }}/images/20200502/final-medium-tweak.png){:target="_blank"} <br/>**Figure 1: Medium Tweak Preference**<br/><br/>
 
 ## Disclaimer
@@ -18,21 +18,21 @@ Below tools are used during this post:
 - [Hopper Disassembler](https://www.hopperapp.com/download.html){:target="_blank"}
 
 ## Overview
-We will fix problems that encountered in previous post. Let me list down things we will cover today:
+We will fix the problems encountered in the previous post. Let me list down things we will cover today:
 - What are `clapButtonPressed:` and `clapButtonReleased:` doing?
 - Are there any alternative methods to hook?
-- How to create preference bundle that allows changing number of claps instead of hard coding.
+- How to create a preference bundle that allows changing a number of claps instead of hard coding.
 - Spoil alert another thing we can tweak Medium
 
-I bet it will be more hands on than previous post, please get our hands dirty!! 👌👌
+I bet it will be more hands-on than the previous post, please get our hands dirty!! 👌👌
 
 ## Clapping function behind the scene
-### Static anlysis using Hopper Disassembler
-As promised in previous post, we will reveal what's going on in `clapButtonPressed:` and `clapButtonReleased:` methods. We need to do some analysis on the Medium binary file.
+### Static analysis using Hopper Disassembler
+As promised in the previous post, we will reveal what's going on in `clapButtonPressed:` and `clapButtonReleased:` methods. We need to do some analysis on the Medium binary file.
 
 With the help of [Frida iOS Dump](https://github.com/AloneMonkey/frida-ios-dump){:target="_blank"} or [CrackerXI](https://forum.iphonecake.com/index.php?/topic/363020-crackerxi-gui-app-decryption-tool-for-ios-11-12-13/){:target="_blank"}, we can easily pull out **.ipa** file of Medium app on a jailbroken device, unzip **.ipa** and navigate to `Payload/hangtag.app` folder.
 
-Drag and drop `hangtag` binary (MachO) file into Hopper Disassembler and wait for a while for it to disassemble. When it finishes, in the left panel make sure `Labels` tab is selected, let search for `clapButtonPressed` and click on `-[ClapButton clapButtonPressed:]` result you will be navigated to method implementation on the right, assembly instructions again!!! But dont worry, this time we don't need to read every instruction, we only need to understand what method is idoing in general. To do that, switch on `Pseudo-code mode` tab, you will be impressed how great it is:
+Drag and drop `hangtag` binary (MachO) file into Hopper Disassembler and wait for a while for it to disassemble. When it finishes, in the left panel make sure `Labels` tab is selected, let search for `clapButtonPressed` and click on `-[ClapButton clapButtonPressed:]` result you will be navigated to method implementation on the right, assembly instructions again!!! But don't worry, this time we don't need to read every instruction, we only need to understand what method is doing in general. To do that, switch on `Pseudo-code mode` tab, you will be impressed with how great it is:
 ```assembly
 /* @class ClapButton */
 -(void)clapButtonPressed:(void *)arg2 {
@@ -46,7 +46,7 @@ As you can see, it invoked timer when button is pressed or tapped (`[self->_long
 ```assembly
 /* @class LongPressClapController */
 -(void)startTimer {
-    [self tryToPerformClap]; // 1. [self tryToPerformClap
+    [self tryToPerformClap]; // 1. [self tryToPerformClap]
     [*(self + 0x8) invalidate]; // 2. [_clapTimer invalidate]
     r22 = [[WeakProxy proxyWithTarget:self] retain];
     r0 = [NSTimer scheduledTimerWithTimeInterval:r22 
@@ -63,10 +63,10 @@ As you can see, it invoked timer when button is pressed or tapped (`[self->_long
 }
 ```
 
-I put some inline comments, let focus on that and ignore the rest:
-1. It invoke method `tryToPerformClap`, by the name we can guest it perform a clap, so it should be count as 1 clap
-2. It tries to invoke method `invalidate` from unknown object at address *(self + 0x8). This is common syntax to access ivars, in this case it's _clapTimer ivar (NSTimer). From apple document, invoke invalidate will stop the timer from ever firing again and request its removal from its run loop.
-3. It create new NSTimer instance, but it seems decompiler is taking wrong arguments, i.e. r22 suppose to be number but it's `WeakProxy`... We have no choice, and we will find out soon.
+I put some inline comments, let focus on that, and ignore the rest:
+1. It invokes method `tryToPerformClap`, by the name we can guess it perform a clap, so it should be count as 1 clap
+2. It tries to invoke the method `invalidate` from an unknown object at address *(self + 0x8). This is the common syntax to access ivars, in this case it's _clapTimer ivar (NSTimer). From apple document, invoke invalidate will stop the timer from ever firing again and request its removal from its run loop.
+3. It creates a new NSTimer instance, but it seems the decompiler is taking wrong arguments, i.e. r22 suppose to be number but it's `WeakProxy`... We have no choice, and we will find out soon.
 4. Store new timer instance to _clapTimer
 
 Switch to assembly mode and focus on these instructions:
@@ -108,7 +108,7 @@ Check references to `clapButtonPressed` and `clapButtonReleased:`, it's showing 
     return;
 }
 ```
-`ClapButton` is subclass of `UIButton` so it will inherit `addTarget:action:forControlEvents:` method. This is the place to register actions for events of type `UIControl.Event`. Let figure it out what are events (`0x1` and `0x1c0` are in hexadecimal) of each action .
+`ClapButton` is subclass of `UIButton` so it will inherit `addTarget:action:forControlEvents:` method. This is the place to register actions for events of type `UIControl.Event`. Let figure out what are events (`0x1` and `0x1c0` are in hexadecimal) of each action.
 
 Let have a look inside `UIControl.Event` declaration (I stripped `public static` modifiers for short) and put inline comments for raw values of each event in decimal and binary.
 ```objective-c
@@ -130,7 +130,7 @@ extension UIControl {
         ...
 }
 ```
-As you can see the raw values pattern, they are all bitmask constants. With this kind of bitmask represent, multiple events can be represented in one number. Let examine it!!
+As you can see the raw values pattern, they are all bitmask constants. With this kind of bitmask represents, multiple events can be represented in one number. Let examine it!!
 
 The control event registered for `clapButtonPressed:` is easy to guess `0x1 = 1 = .touchDown`. But for `clapButtonReleased:` it is a bit tricky. `0x1c0 = 448` does not match any defined events, is Hopper Disassembler decompiler wrong? Convert `0x1c0` to binary will be `0001 1100 0000`. There are 3 bits set, check with above constants it will be this combination: `0001 0000 0000 | 0000 1000 0000 | 0000 0100 0000` or human-readable would be `.touchCancel | .touchUpOutside | .touchUpInside`, so it's revealed:
 ```assembly
@@ -154,7 +154,7 @@ Let summarize where we are:
 
 ```
 
-I bet we can hook into `-[LongPressClapController tryToPerformClap]` method and handle clapping stuff. You can delve into `tryToPerformClap` to reverse more thing, I will leave it to you (spoil alert: look for method that allows to hook and bypass max 50 claps, it will be only 2 or 3 levels deeper from `tryToPerformClap`, below is the example 😊)
+I bet we can hook into `-[LongPressClapController tryToPerformClap]` method and handle clapping stuff. You can delve into `tryToPerformClap` to reverse more thing, I will leave it to you (spoil alert: look for a method that allows to hook and bypass max 50 claps, it will be only 2 or 3 levels deeper from `tryToPerformClap`, below is the example 😊)
 
 ![Hook to bypass max 50 claps per post](https://thumbs.gfycat.com/ReasonableAmusingHomalocephale-size_restricted.gif)<br/>**Figure 4: Hook to bypass max 50 claps per post (client-side working only)**<br/><br/>
 
@@ -178,7 +178,7 @@ int numberOfClaps = 4;
 Compile and install the tweak again, you will you it will work as expected.
 
 ## Preference bundle
-The only thing we feel not clean is that we are hard coding `numberOfClaps` in the tweak source code, the end users have no option to change it unless they have source code. Theos has an template that allow you to create preference bundle to hook into `Settings.app` and add new setting item as you want. Our plan is using this preference bundle template to create new `Medium Tweak` item with a slider allows users to set number of claps as they want. How do you feel? 🤯🤯
+The only thing we feel not clean is that we are hard coding `numberOfClaps` in the tweak source code, the end-users have no option to change it unless they have source code. Theos has a template that allows you to create preference bundle to hook into `Settings.app` and add a new setting item as you want. We plan to use this preference bundle template to create a new `Medium Tweak` item with a slider that allows users to set the number of claps as they want. How do you feel? 🤯🤯
 
 ### Create Preference bundle project
 From the root folder of your tweak, run Theos command to create new preference bundle template as below:
@@ -232,7 +232,7 @@ Your project structure will look like this:
 ```
 
 ### Design preference layout
-Our target is build the preference UI like **Figure 1**. Let make the entry first (left panel on iPad).
+Our target to build the preference UI like **Figure 1**. Let make the entry first (left panel on iPad).
 
 #### Entry item
 For entry item, we need an icon and change the entry title a bit. Let open `entry.plist` file and make it like this:
@@ -261,7 +261,7 @@ For entry item, we need an icon and change the entry title a bit. Let open `entr
 ```
 For entry icon, I downloaded from [flaticon.com](https://www.flaticon.com/free-icon/clapping_599538?term=clap&page=1&position=9){:target="_blank"} and put same location as `entry.plist` file, name it `entry-icon.png`(size 32x32) and `entry-icon@2x.png`(size 64x64).
 
-For entry label, I changed value to **Medium Tweak**, it's up to you.
+For the entry label, I changed the value to **Medium Tweak**, it's up to you.
 
 #### Preference UI
 For preference UI, I'm using slider cell and static text cell to display slider value (we call it **specifiers**). Let open `Resources/Root.plist` file and modify like this (you might have a look other [preferences specifier plist](https://iphonedevwiki.net/index.php/Preferences_specifier_plist){:target="_blank"} to understand how to use it)
@@ -309,11 +309,11 @@ For preference UI, I'm using slider cell and static text cell to display slider 
 </plist>
 ```
 
-We are using `PSGroupCell` (you can think it like section) and `PSSliderCell` belongs to `PSGroupCell`. For `PSGroupCell` I will add it programmatically so you can understand how to add specifiers in plist or in code file. 
+We are using `PSGroupCell` (you can think it like section) and `PSSliderCell` belongs to `PSGroupCell`. For `PSGroupCell` I will add it programmatically so you can understand how to add specifiers in plist or the code file. 
 
-For `PSSliderCell` we are using `leftImage` and `rightImage` key, you can download those images and put in `Resources` folder. My case I made `leftImage` size smaller than `rightImage` size to illustrate increment order.
+For `PSSliderCell` we are using `leftImage` and `rightImage` key, you can download those images and put in `Resources` folder. In my case I made `leftImage` size smaller than `rightImage` size to illustrate increment order.
 
-Now it's time for you to run and see how preference bundle look like, from Terminal navigate to Tweak root folder (not preference root folder) then compile and install the tweak as normal, it will compile and install our preference together, would be look like this
+Now it's time for you to run and see how preference bundle look like, from Terminal navigate to Tweak root folder (not preference root folder) then compile and install the tweak as normal, it will compile and install our preference together, would look like this:
 [![Medium Tweak Preference]({{ site.baseurl }}/images/20200502/preference-ui-without-static-cell.png)]({{ site.baseurl }}/images/20200502/preference-ui-without-static-cell.png){:target="_blank"} <br/>**Figure 5: Medium Tweak Preference draft**<br/><br/>
 
 It looks nice and slider working fine, let add one more specifier programmatically right below using `PSStaticTextCell` to show value of slider. Open `RTARootListController.m` and modify existing `- (NSArray *)specifiers` as below:
@@ -407,9 +407,9 @@ We've just added new static cell to display value of segment. Because segment ce
 }
 ```
 
-Clean build and install the tweak, you will see number of claps change when drag segment. To double confirm if new segment value is persisted to file, open Filza app and navigate to `/User/Library/Preferences/com.reversethatapp.mediumtweakpref.plist` you will see there is an entry `DEFAULT_CLAPS` reflects new segment value. 
+Clean build and install the tweak, you will see the number of claps change when drag segment. To double confirm if new segment value is persisted to file, open Filza app and navigate to `/User/Library/Preferences/com.reversethatapp.mediumtweakpref.plist` you will see there is an entry `DEFAULT_CLAPS` that reflects new segment value. 
 
-The codes require for preference bundle is complete, now we just need to read this `DEFAULT_CLAPS` value from `Tweak.xm` and simulate number of taps on UI.
+The codes require for preference bundle are complete, now we just need to read this `DEFAULT_CLAPS` value from `Tweak.xm` and simulate the number of taps on UI.
 
 ### Using Preference 
 #### Which method to hook?
@@ -428,7 +428,7 @@ Switch back to Hopper Disassembler and navigate to `tryToPerformClap` method and
 Just make it short this method will call `[[self delegate] clapViewWasTapped]`, so what's the delegate here? Double click on selector `clapViewWasTapped` you will be prompted this dialog:
 [![Methods implementing clapsViewWasTapped]({{ site.baseurl }}/images/20200502/clapViewWasTapped-selector.png)]({{ site.baseurl }}/images/20200502/clapViewWasTapped-selector.png){:target="_blank"} <br/>**Figure 3: Methods implementing selector clapViewWasTapped**<br/><br/>
 
-It has 3 classes implements this selector, the usual way is dynamic analysis with `lldb` to set breakpoint and print out `delegate` instance. But there is another way I want to introduce in this post is using [frida-trace](https://frida.re/docs/ios/){:target="_blank"} (I will have another post how to use it in details soon). From Terminal just run `frida-ps -Ua` to see which is process ID of Medium app:
+It has 3 classes implements this selector, the usual way is dynamic analysis with `lldb` to set breakpoint and print out `delegate` instance. But there is another way I want to introduce in this post is using [frida-trace](https://frida.re/docs/ios/){:target="_blank"} (I will have another post how to use it in details soon). From Terminal just run `frida-ps -Ua` to see which is the process ID of Medium app:
 ```bashscript
 MBP# frida-ps -Ua
   PID  Name         Identifier
@@ -496,7 +496,7 @@ Next posts we will continue to reverse Medium app and enable unlimited read feat
 
 ## Final thoughts
 - Again hooking is a fast way to change existing behaviors of the app, you can find there are so many useful tweaks out there to install and experience yourself.
-- From research prospective, hooking to methods can help change behaviors of the app, for example disable jailbreak detection, disable SSL Pinning... which allow you to inspect the app in runtime.
+- From a research perspective, hooking to methods can help change behaviors of the app, for example disable jailbreak detection, disable SSL Pinning... which allow you to inspect the app in runtime.
 
 ## Further readings
 - [Preferences Specifier plist](https://iphonedevwiki.net/index.php/Preferences_specifier_plist){:target="_blank"}
