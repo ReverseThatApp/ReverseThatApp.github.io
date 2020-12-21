@@ -9,7 +9,7 @@ I will use EWA, a language learning app on AppStore to illustrate the whole proc
 
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues.
+This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues.
 
 ## Prerequisites
 Below tools are used during this post:

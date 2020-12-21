@@ -7,7 +7,7 @@ Imagine that you want to inspect the app to see what's information exchange betw
 [![purchase screen]({{ site.baseurl }}/images/br/lldb-attached.png)]({{ site.baseurl }}/images/br/lldb-attached.png){:target="_blank"} <br/>**Figure: LLDB Attached**<br/><br/>
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact the app's author if you find issues. We will inspect an app name REDACTED. The figures during the post just for demonstrations, might not relevant to REDACTED app.
+This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect an app name REDACTED. The figures during the post just for demonstrations, might not relevant to REDACTED app.
 
 ## Prerequisites
 Below tools are used during this post:

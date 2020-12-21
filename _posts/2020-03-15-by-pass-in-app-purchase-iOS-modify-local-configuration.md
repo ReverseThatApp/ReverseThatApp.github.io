@@ -7,7 +7,7 @@ In this post, we will reverse engineering and unlock in-app purchase contents by
 [![locked content]({{ site.baseurl }}/images/wp-ios/in-app-purchase-locked-contents.png)]({{ site.baseurl }}/images/wp-ios/in-app-purchase-locked-contents.png){:target="_blank"} <br/>**Figure 1: Sample In-app purchase locked contents**<br/><br/>
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact app's author if you find issues. We will inspect an app has In-app purchases feature, name PATCHABLE. The figures during the post just for demonstrations, might not relevant to PATCHABLE app.
+This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect an app has In-app purchases feature, name PATCHABLE. The figures during the post just for demonstrations, might not relevant to PATCHABLE app.
 
 ## Prerequisites
 Below tools are used during this post:

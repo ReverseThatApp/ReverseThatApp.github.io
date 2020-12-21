@@ -7,7 +7,7 @@ Today we will reverse engineering **Medium** iOS app and modify existing claps f
 [![How to create Tweak]({{ site.baseurl }}/images/20200426/how-to-create-Medium-tweak.jpeg)]({{ site.baseurl }}/images/20200426/how-to-create-Medium-tweak.jpeg){:target="_blank"} <br/>**Figure: How to create your own Tweak**<br/><br/>
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact the app's author if you find issues. We will inspect the [Medium app](https://apps.apple.com/us/app/medium/id828256236){:target="_blank"} installed from AppStore.
+This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect the [Medium app](https://apps.apple.com/us/app/medium/id828256236){:target="_blank"} installed from AppStore.
 
 ## Prerequisites
 Below tools are used during this post:

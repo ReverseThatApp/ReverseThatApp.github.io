@@ -7,7 +7,7 @@ In this post we will continue to enhance **Medium** tweak. We will learn how to 
 [![Medium Tweak Preference]({{ site.baseurl }}/images/20200502/final-medium-tweak.png)]({{ site.baseurl }}/images/20200502/final-medium-tweak.png){:target="_blank"} <br/>**Figure 1: Medium Tweak Preference**<br/><br/>
 
 ## Disclaimer
-This post is for educational purposes only, please use it at your discretion and contact the app's author if you find issues.
+This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues.
 
 ## Prerequisites
 Below tools are used during this post:
