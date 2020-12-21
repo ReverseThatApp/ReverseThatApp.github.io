@@ -18,6 +18,7 @@ Below tools are used during this post:
 
 ## Overview
 Have you ever installed an IAP app that requires to purchase before using it? Even it provides a free trial option, you still need to purchase the trial first before handing on any app features, and it will auto-renew the monthly charge option (or yearly) after the free trial expires. I found REDACTED app has the same IAP behavior, which has more than hundres of thousands ratings in the App Store. When I launch REDACTED app for the first time, it shows the paywall immediately with the only option to purchase to use the rest of the app.
+
 [![Paywall]({{ site.baseurl }}/images/20201218/paywall.jpeg)]({{ site.baseurl }}/images/20201218/paywall.jpeg){:target="_blank"} <br/>**Figure 1: Paywall screen**<br/><br/>
 
 Tap on **Continue** button will lead to the iOS built-in IAP popup:
