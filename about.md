@@ -6,9 +6,9 @@ permalink: /about/
 
 
 ### Info
-- Engineer by day, researcher by night.
-- Hands-on Assembly Language (arm, arm64).
-- Write tweak and binary patching for iOS apps.
+- Mobile security engineer
+- Hands-on Assembly Language (arm32, arm64, x86/64).
+- Develop tweaks, binary patching for iOS apps.
 
-### Contact me
+### Connect
 [@ReverseThatApp](https://twitter.com/ReverseThatApp) or [reversethatapp@gmail.com](reversethatapp@gmail.com)
