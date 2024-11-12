@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Flareon11 2024 CTF Challenge 3 - aray
+title: "Cracking the Flare-On 11 CTF 2024: Challenge 3 - aray"
 ---
 Given a `.yara` file with hundreds of conditions, we need to dive deep to recover each character and reconstruct the hidden Yara rules. This is indeed a pleasant challenge—or am I wrong?
 [![Challenge 3 - aray](https://lh3.googleusercontent.com/pw/AP1GczP0Zp7rfVdUh3LtetCVUK1JANiHG6tMP1IZJEq45yxABL23tTNMMWBJp5nK2wbZmb6PrmOhGjozDMpIWFEN-YFwNqQm4aNyjRSzFeXvnr84hq36rXextOfjYgWsek5tMpReUMkHUYLZ7AcjGQv0D7D-=w2284-h1354-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczP0Zp7rfVdUh3LtetCVUK1JANiHG6tMP1IZJEq45yxABL23tTNMMWBJp5nK2wbZmb6PrmOhGjozDMpIWFEN-YFwNqQm4aNyjRSzFeXvnr84hq36rXextOfjYgWsek5tMpReUMkHUYLZ7AcjGQv0D7D-=w2284-h1354-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - aray** <br/><br/>

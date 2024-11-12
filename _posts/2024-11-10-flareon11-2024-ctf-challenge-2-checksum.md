@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Flareon11 2024 CTF Challenge 2 - Checksum
+title: "Cracking the Flare-On 11 CTF 2024: Challenge 2 - Checksum"
 ---
 We recently came across a silly executable that appears benign. It just asks us to do some math... From the strings found in the sample, we suspect there are more to the sample than what we are seeing. Please investigate and let us know what you find!
 [![Challenge 2 - Checksum](https://lh3.googleusercontent.com/pw/AP1GczPuUm_pFiCyEgh6r1Zdbq9r8T07IPkcAVBeWxqFNpeZkUGUcDYEGqoUO77RLIRye4D7wK9TUCcm7_FO0vG7hq9y3TJEYh5soUNjQjfF0pjIdmeSncv-tTEtbaK4OhF5jWJQ1xyPYH9oQkiByKPMvg06=w1954-h1022-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczPuUm_pFiCyEgh6r1Zdbq9r8T07IPkcAVBeWxqFNpeZkUGUcDYEGqoUO77RLIRye4D7wK9TUCcm7_FO0vG7hq9y3TJEYh5soUNjQjfF0pjIdmeSncv-tTEtbaK4OhF5jWJQ1xyPYH9oQkiByKPMvg06=w1954-h1022-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - Checksum** <br/><br/>

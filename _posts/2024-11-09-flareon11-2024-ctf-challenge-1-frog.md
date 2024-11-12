@@ -1,8 +1,9 @@
 ---
 layout: post
-title: Flareon11 2024 CTF Challenge 1 - Frog
+title: "Cracking the Flare-On 11 CTF 2024: Challenge 1 - Frog"
 ---
-Welcome to Flare-On 11! Your mission is get the frog to the \"11\" statue, and the game will display the flag. All flags in this event are formatted as email addresses ending with the @flare-on.com domain.
+
+Dive into my journey through the Flare-On 11 CTF Challenge! I tackled all 10 challenges this year, and in this series, I’ll break down my thought process, strategies, and discoveries. Whether you’re a beginner or an experienced CTF enthusiast, expect plenty of insights and detailed explanations to guide you through each step!
 [![Challenge 1 - Frog](https://lh3.googleusercontent.com/pw/AP1GczMc4Z0pvk-NzMtaw5InM5ZaRdvQYiryVJoQVvTHvZS4EmjlQoJZjRfkJxt10g2bByPFa2TXohKlsNdNF86Ji3nwKEQ-oqhvsqnsdqHHdMdQ-J3Ddd9YheV0-nzMOsZZpOOW3Zg-V7n2jHtrxNOps-jA=w734-h596-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczMc4Z0pvk-NzMtaw5InM5ZaRdvQYiryVJoQVvTHvZS4EmjlQoJZjRfkJxt10g2bByPFa2TXohKlsNdNF86Ji3nwKEQ-oqhvsqnsdqHHdMdQ-J3Ddd9YheV0-nzMOsZZpOOW3Zg-V7n2jHtrxNOps-jA=w734-h596-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - Frog** <br/><br/>
 
 
