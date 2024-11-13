@@ -14,7 +14,7 @@ script/*
 # Bundler cache
 .bundle
 vendor
-Gemfile.lock
+#Gemfile.lock
 
 # Jekyll cache
 .jekyll-cache
