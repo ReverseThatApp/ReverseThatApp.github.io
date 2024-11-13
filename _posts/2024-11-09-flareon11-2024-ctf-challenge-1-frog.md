@@ -34,7 +34,8 @@ img
 As we have the source code `frog.py`, we can directly jump into the codes for  understanding the game logic to find the flag, but what was the fun without seeing how does the game look like? There will be many approaches to solve this challenge, let start with normal one first.
 
 ## Install dependencies
-*This step is optional for Windows users and for ones who don't need to run the game.*
+>This step is optional for Windows users and for ones who don't need to run the game.
+{: .prompt-info }
 
 The `frog.py` is importing `pygame`, hence we need to install this page. We can use pip3 to install `pygame` package:
 ```bash
