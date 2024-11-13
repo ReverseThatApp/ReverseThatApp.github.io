@@ -1,10 +1,15 @@
 ---
 layout: post
 title: How to tweak existing Medium iOS app features with Theos & Logos - part 1
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczPFEkRa2MipjryjGgs8ixdAKm7ulXmxkcAydCyBJ751trrCcZs7Oh8XOVipsDeCUlf2UAGE0ZDjATybZEJN9Bvo81F5cpg7oMSFbEnZq_AWWYKAUDbfVyzXG4ZPuD69PJdm_bnG5wPA-voVdBBdLkMR=w2048-h1536-s-no-gm?authuser=2
+    alt: How to create your own Tweak
+tags: [ios, tweak]
 ---
 
 Today we will reverse engineering **Medium** iOS app and modify existing claps feature. We will also learn about how to create your own Cydia tweak using `theos` platform, hook into a method, and change its behavior as we want to. Let's do it!!!!
-[![How to create Tweak]({{ site.baseurl }}/images/20200426/how-to-create-Medium-tweak.jpeg)]({{ site.baseurl }}/images/20200426/how-to-create-Medium-tweak.jpeg){:target="_blank"} <br/>**Figure: How to create your own Tweak**<br/><br/>
+![How to create Tweak](https://lh3.googleusercontent.com/pw/AP1GczPFEkRa2MipjryjGgs8ixdAKm7ulXmxkcAydCyBJ751trrCcZs7Oh8XOVipsDeCUlf2UAGE0ZDjATybZEJN9Bvo81F5cpg7oMSFbEnZq_AWWYKAUDbfVyzXG4ZPuD69PJdm_bnG5wPA-voVdBBdLkMR=w2048-h1536-s-no-gm?authuser=2)
+_**Figure: How to create your own Tweak**_
 
 ## Disclaimer
 This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect the [Medium app](https://apps.apple.com/us/app/medium/id828256236){:target="_blank"} installed from AppStore.
@@ -23,7 +28,8 @@ Medium is an online publishing platform that allows users to read and publish st
 But do you know that you can clap for a post more than one time? Recently I've just discovered that Medium allows to clap 50 times per post? You might wonder why they do that? From their website it's the way you can show the author how much you liked that post. It makes sense if you want to support your "idol" above others, looks interesting. You can tap on the 👏 button one by one to increase your claps or tap and hold the 👏 button until you reach the number you want (of course limit to maximum 50 👏 per post).
 
 Medium implemented very nice animation to attract readers to clap for an author, which includes me. The only thing that if you are a crazy fan and want to support your "idol" 30 or 40 or maximum 50 claps for any posts, clap one by one seems to be a waste of time. What if you can just one clap to make it 35 or 50 claps? Yeah, it might be a good idea (or bad one, you named it 😢) but what you can do if you don't have the source code to modify the app. Worry not, if you're using a jailbroken device, you can tweak any app you like to enhance it and make it convenient for you, write a Tweak for Medium app, which we will walk through next sections. For ones that don't have a jailbroken device, you can use the same idea to patch the app and repack if you really love this feature, but I can say it's not straight forward like the way we use Tweak, so do it at your own risk 😊
-[![How to create Tweak](https://images.unsplash.com/photo-1566796215362-7f6bd862ea82?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2800&q=80)](https://images.unsplash.com/photo-1566796215362-7f6bd862ea82?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2800&q=80){:target="_blank"} <br/>**Claps** _(source: unsplash by [@Daniel Lincoln](https://unsplash.com/photos/iK8t56RS4g8){:target="_blank"})_<br/><br/>
+![How to create Tweak](https://images.unsplash.com/photo-1566796215362-7f6bd862ea82?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2800&q=80)
+_**Claps** (source: unsplash by [@Daniel Lincoln](https://unsplash.com/photos/iK8t56RS4g8){:target="_blank"})_
 
 ## Theos development setup
 ### What is Theos
@@ -38,7 +44,7 @@ To check if your Theos setup successfully, let run this command in your Terminal
 ## Medium Tweak development
 ### Create Tweak project
 From Terminal, run: `$THEOS/bin/nic.pl` then select `[10.] iphone/tweak`
-```bashscript
+```bash
 MBP# $THEOS/bin/nic.pl
 NIC 2.0 - New Instance Creator
 ------------------------------
@@ -86,25 +92,30 @@ There are many ways to reverse engineering an app such as static analysis or dyn
 
 ### FLEXLoader 
 *[FLEXLoader](http://cydia.saurik.com/package/com.joeyio.flexloader/){:target="_blank"} is a iOS developer tool, it dynamically loads FLEX into iOS apps on jailbroken devices. [FLEX (Flipboard Explorer)](https://github.com/Flipboard/FLEX){:target="_blank"} is a set of in-app debugging and exploration tools for iOS development. When presented, FLEX shows a toolbar that lives in a window above your application. From this toolbar, you can view and modify nearly every piece of state in your running application. (source: Cydia)*
-![FLEX](https://user-images.githubusercontent.com/8371943/70185687-e842c800-16af-11ea-8ef9-9e071380a462.gif){:target="_blank"} <br/>**Figure 1: FLEX (Flipboard Explorer)** *(source: FLEX)*<br/><br/>
+![FLEX](https://user-images.githubusercontent.com/8371943/70185687-e842c800-16af-11ea-8ef9-9e071380a462.gif)
+_**Figure 1: FLEX (Flipboard Explorer)** *(source: FLEX)*_
 
 After installing **FLEXLoader** from Cydia, you can configure which app you want to load FLEX via `FLEXLoader` menu in `Settings.app`. Let switch on **Medium** item in `FLEXLoader` menu to load FLEX whenever you launch **Medium** app.
 
-[![FLEXLoader]({{ site.baseurl }}/images/20200426/FlexLoader-hook-medium.jpeg)]({{ site.baseurl }}/images/20200426/FlexLoader-hook-medium.jpeg){:target="_blank"} <br/>**Figure 2: Configure loading FLEXLoader into Medium app**<br/><br/>
+![FLEXLoader]({{ site.baseurl }}/images/20200426/FlexLoader-hook-medium.jpeg)
+_**Figure 2: Configure loading FLEXLoader into Medium app**_
 
 ### Dynamic analysis
 Now launch the **Medium** app, and tap on any posts that you can clap, you will see that **FLEX** is loaded and shown as a toolbar on top of the app.
-[![FLEX is loaded]({{ site.baseurl }}/images/20200426/FLEX-loaded-in-medium.jpeg)]({{ site.baseurl }}/images/20200426/FLEX-loaded-in-medium.jpeg){:target="_blank"} <br/>**Figure 3: FLEX is loaded in Medium app**<br/><br/>
+![FLEX is loaded]({{ site.baseurl }}/images/20200426/FLEX-loaded-in-medium.jpeg)
+_**Figure 3: FLEX is loaded in Medium app**_
 
 You can move FLEX toolbar position around the screen or hide that toolbar if you feel annoy, for the next steps let move FLEX toolbar out of **Medium** footer action bar as we need to further inspect this area.
 
 We know that when tapping on the Clap icon at the bottom-left screen it will perform an action from an unknown class which we need to find out, so let trace from the Clap icon.
 
 From the FLEX toolbar, let toggle item `select` to activate select mode. This mode allows us to inspect any views we tap on the screen. We will know which kind of Clap icon soon.
-[![Inspect clap icon]({{ site.baseurl }}/images/20200426/inspect-clap-icon.jpeg)]({{ site.baseurl }}/images/20200426/inspect-clap-icon.jpeg){:target="_blank"} <br/>**Figure 4: Inspect Clap icon**<br/><br/>
+![Inspect clap icon]({{ site.baseurl }}/images/20200426/inspect-clap-icon.jpeg)
+_**Figure 4: Inspect Clap icon**_
 
 As you can guess and see, it's an `UIImageView`, so how to trace which class contains this Clap image view? It's easy, though. From FLEX toolbar, tap on `views` item, it will open new screen showing view hierarchy of this screen which selected `UIImageView` highlighted as below:
-[![Inspect clap icon]({{ site.baseurl }}/images/20200426/clap-views-hierarchy.jpeg)]({{ site.baseurl }}/images/20200426/clap-views-hierarchy.jpeg){:target="_blank"} <br/>**Figure 5: View hierarchy**<br/><br/>
+![Inspect clap icon]({{ site.baseurl }}/images/20200426/clap-views-hierarchy.jpeg)
+_**Figure 5: View hierarchy**_
 
 From here you can see that the Clap image view belongs to `ClapButton` class which belongs to `StickyFullPostFooterActionBar` class. Let tap on ℹ️ icon of `ClapButton` row to inspect `ClapButton` class, it's an instance of `ClapButton` in memory, it will navigate to a new screen that lists all of the properties, ivars, methods, base classes of `ClapButton` class. Are you 😲 now? 
 
@@ -112,7 +123,8 @@ Not even list down everything belongs to this class, it also allows us to invoke
 
 Let filter the keyword we are looking for, type `clap` into **Filter search bar**, luckily you can see some matching results:
 
-[![Clap button info]({{ site.baseurl }}/images/20200426/clapbutton-filter-clap.jpeg)]({{ site.baseurl }}/images/20200426/clapbutton-filter-clap.jpeg){:target="_blank"} <br/>**Figure 6: ClapButton info**<br/><br/>
+![Clap button info]({{ site.baseurl }}/images/20200426/clapbutton-filter-clap.jpeg)
+_**Figure 6: ClapButton info**_
 
 If you're an iOS developer, I'm sure you know how this clap working behind the scene base on filtered out results. If not, let's guess what's this class doing.
 
@@ -122,7 +134,8 @@ If this guess still does not convince you yet, look into **METHOD** section of F
 
 Let do some testings by invoking these methods to make sure if it's working first. FLEX allows us to invoke the method of an instance from UI, so convenient!! It's very helpful and saves a lot of effort when reversing any apps. Let tap on `-(void)clapButtonPressed:(id)` method, it will navigate to a new screen with `Call` button on the top-right screen that allows you to invoke this method, just tap on `Call` button and see what happen. We assume that it will show the clap animation on UI like we manually tap the Clap button of a post. Let see what happens:
 
-[![Invoke method clapButtonPressed](https://thumbs.gfycat.com/NearOpulentGossamerwingedbutterfly-size_restricted.gif)](https://thumbs.gfycat.com/NearOpulentGossamerwingedbutterfly-size_restricted.gif){:target="_blank"} <br/>**Figure 7: Invoke method clapButtonPressed:**<br/><br/>
+![Invoke method clapButtonPressed](https://thumbs.gfycat.com/NearOpulentGossamerwingedbutterfly-size_restricted.gif)
+_**Figure 7: Invoke method clapButtonPressed:**_
 
 HURRAYYYY!!!!! The clap function is working as expected and very nice animation (confetti??), anyway I 😍 this animation. The claps keep counting until `+50` but never stop, because we are calling `clapButtonPressed` method which is simulating press and hold the Clap button. So to make it stop, we need to invoke the second method `-(void)clapButtonReleased:(id)` same way as we invoked `-(void)clapButtonPressed:(id)`, and no need to say it STOPPED the clapping!!!
 
@@ -132,14 +145,14 @@ So we just identified which class (`ClapButton`) and methods (`-(void)clapButton
 We will use Logos's syntax to develop this tweak. *Logos is a component of the Theos development suite that allows method hooking code to be written easily and clearly, using a set of special preprocessor directives. (source: [http://iphonedevwiki.net/](http://iphonedevwiki.net/index.php/Logos){:target="_blank"})*
 
 Open `Tweak.xm` file and be ready to write our tweak. To hook into a class, we need to use directive `%hook Classname`, in this case, it will be like this:
-```bashscript
+```objectivec
 %hook ClapButton
 
 %end
 ```
 
 Next we need to hook into method `-(void)clapButtonPressed:(id)`, just put it inside `%hook ClapButton` block:
-```bashscript
+```objectivec
 %hook ClapButton
 
 -(void)clapButtonPressed:(id)arg2 {
@@ -153,7 +166,7 @@ Next we need to hook into method `-(void)clapButtonPressed:(id)`, just put it in
 What is the above hooking method doing? It just added a log statement at the beginning to log method name and arguments (`%log`) to the `Console` app then invoke the original method (`%orig;`). Is that very simple?
 
 Before doing anything else, let try to install this Tweak and verify if our hooking method working or not. Let open `Makefile` file and make sure the content will look like this:
-```bashscript
+```objectivec
 # Replace with your jailbroken phone IP address
 export THEOS_DEVICE_IP=192.168.1.128 THEOS_DEVICE_PORT=22
 
@@ -176,7 +189,7 @@ include $(THEOS_MAKE_PATH)/tweak.mk
 ```
 
 From Terminal, change directory to the tweak root folder and run this command: `make package install` (if you are developing tweak often, you can create an alias for this command as a shortcut, I used to make it `alias mpi='make package install'`)
-```bashscript
+```bash
  MBP# make package install
 > Making all for tweak mediumenhanceclapstweak…
 ==> Preprocessing Tweak.xm…
@@ -198,12 +211,12 @@ Setting up com.yourcompany.medium-enhance-claps-tweak (0.0.1-1+debug) ...
 If you can see above Terminal logs, it means your tweak is complied and installed successfully on the device. To double confirm, open `Cydia` app, tap on `Installed` tab and select `Recent` segment, you will see your tweak `medium-enhance-claps-tweak` installed. The first step achieved, let check if our hooking method is called when clapping a post.
 
 Plug your jailbroken device into laptop using cable and open Console app (assume you're using Macbook), select your device on the left panel and key in "ClapButton" in search text field then clap a post, you will see new log record appears, like this:
-```bashscript
+```
 [1;36m[medium-enhance-claps-tweak] [m[0;36mTweak.xm:79[m [0;30;46mDEBUG:[m -[<ClapButton: 0x102857de0> clapButtonPressed:<ClapButton: 0x102857de0; baseClass = UIButton; frame = (52 -3; 26 50); opaque = NO; tintColor = UIExtendedSRGBColorSpace 0 0 0 0.64; layer = <CALayer: 0x1c042de80>>]
 ```
 
 Here you go, the hooking function is working with an extra log. We're now confident to tweak this method. Let say when user tap on Clap button, we want default +4 Claps instead of +1, we can do like this:
-```bashscript
+```objectivec
 /* You can move this interface declaration to a header file, i.e Tweak.h
  * and include it in Tweak.xm using #include "Tweak.h"
  */
@@ -232,7 +245,7 @@ int numberOfClaps = 4;
 ```
 
 You're might aware why we need to declare `@interface ClapButton : NSObject` with method `-(void)clapButtonReleased:(id)arg2;`. The reason is that we're calling `[self clapButtonReleased:arg2];` in method `clapButtonPressed`. If not declare `clapButtonReleased` in that interface, you will get this kind of error when compiling the tweak: 
-```bashscript
+```bash
 Tweak.xm:89:7: error: receiver type 'ClapButton' for instance message is a forward declaration
 [self clapButtonReleased:arg2];
 ```
@@ -247,7 +260,8 @@ I see the post is too long so we will cover other things in my next post. There 
 - This method hooking not only hooks into 3rd apps but also can hook into system apps and processes, like SpringBoard... So if you want to dive deeper, you can write tweak to change your own jailbroken look and feel, it's possible.
 - With great power comes great responsibility, so do at your own risk :)
 
-[![](https://images.unsplash.com/photo-1521714161819-15534968fc5f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80)](https://images.unsplash.com/photo-1521714161819-15534968fc5f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80){:target="_blank"} <br/>_(source: unsplash by [@Road Trip with Raj](https://unsplash.com/photos/o4c2zoVhjSw){:target="_blank"})_<br/><br/>
+![](https://images.unsplash.com/photo-1521714161819-15534968fc5f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80)
+_(source: unsplash by [@Road Trip with Raj](https://unsplash.com/photos/o4c2zoVhjSw){:target="_blank"})_
 
 
 ## Further readings

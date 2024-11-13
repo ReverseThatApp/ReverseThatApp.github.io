@@ -1,10 +1,13 @@
 ---
 layout: post
 title: Bypass in-app purchase content in iOS apps by modifying local configuration!
+image:
+    path: /images/wp-ios/in-app-purchase-locked-contents.png
+    alt: Sample In-app purchase locked contents
+tags: [ios, iap, bypass, burp-suite]
 ---
 
 In this post, we will reverse engineering and unlock in-app purchase contents by modifying local configuration on device. Below is an example of locked features and unlocked ones.
-[![locked content]({{ site.baseurl }}/images/wp-ios/in-app-purchase-locked-contents.png)]({{ site.baseurl }}/images/wp-ios/in-app-purchase-locked-contents.png){:target="_blank"} <br/>**Figure 1: Sample In-app purchase locked contents**<br/><br/>
 
 ## Disclaimer
 This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect an app has In-app purchases feature, name PATCHABLE. The figures during the post just for demonstrations, might not relevant to PATCHABLE app.
@@ -35,17 +38,19 @@ Why I say luckily, because sometime developer put images inside Assets catalog i
 As of now, with that icon name **sub_lock.png**, let find out where it is used in code.
 Let open **Hopper Disassembler** and drag PATCHABLE Mach-O file into it, wait a while until disassembling process completed, switch to **Strings** tab and search for **sub_lock** keyword. Unfortunately nothing is found for this keyword, which mean somehow the code does not reference to this string directly.
 
-[![lock icon on Hopper]({{ site.baseurl }}/images/wp-ios/sub-lock-hopper-search.png)]({{ site.baseurl }}/images/wp-ios/sub-lock-hopper-search.png){:target="_blank"} <br/>**Figure 2: Search sub_lock references icon in Hopper Disassembler**<br/><br/>
+![lock icon on Hopper]({{ site.baseurl }}/images/wp-ios/sub-lock-hopper-search.png)
+_**Figure 2: Search sub_lock references icon in Hopper Disassembler**_
 
 ### Dynamic Analysic
 Without luck, let's change strategy to dynamic analysis.
 This time we will launch Burp Suite with proxy configuration setup for device ready.
 Relaunch the app and monitor HTTP requests in Burp Suite **HTTP history** tab, we can see many requests go through with request & response body.
-[![App requests via Burp Suite]({{ site.baseurl }}/images/wp-ios/burp-app-configuration-response-body.png)]({{ site.baseurl }}/images/wp-ios/burp-app-configuration-response-body.png){:target="_blank"} <br/>**Figure 3: Burp Suite app HTTP requests**<br/><br/>
+![App requests via Burp Suite]({{ site.baseurl }}/images/wp-ios/burp-app-configuration-response-body.png)
+_**Figure 3: Burp Suite app HTTP requests**_
 
 
 Go through response's body of each request, we can see as above there is one response's body contains some JSON fields related to our app content:
-```bashscript
+```json
   "listdata": {
     "url": "http://REDACTED/appdata/REDACTED/booklist/book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json", 
     "checksum": "f79e2bfd42967bddc6089cd9a556c756", 
@@ -53,8 +58,8 @@ Go through response's body of each request, we can see as above there is one res
   }
 ```
 
-With given url **http://REDACTED/appdata/REDACTED/booklist/book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json**, open it on browser we can see some kind of this sample JSON format:
-```bashscript
+With given url `http://REDACTED/appdata/REDACTED/booklist/book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json`, open it on browser we can see some kind of this sample JSON format:
+```json
 {
   "data": {
     "album_list": [
@@ -116,26 +121,33 @@ With given url **http://REDACTED/appdata/REDACTED/booklist/book_list_ios_appstor
 
 Now guess what? This kind of server configuration (remote feature flags) will be used to applying in PATCHABLE app. The way it works is that there are bundles (Free and paid) that include cards content for each bundle (card ids). Needless to say what we can do is figure out how to modify `"include_album_item_ids"` array to contains all `"album_item_id"` to enjoy all premium contents as a free user.
 Let double confirm again those values like `"include_album_item_ids"`, `"charge_type"` or `"price_state"` ... will be used in code, search those string in Hopper Disassembler we can see its references.
-[![Search json fields in Hopper]({{ site.baseurl }}/images/wp-ios/hopper-search-charge-type.png)]({{ site.baseurl }}/images/wp-ios/hopper-search-charge-type.png){:target="_blank"} <br/>**Figure 4: Response fields are being used in app**<br/><br/>
+![Search json fields in Hopper]({{ site.baseurl }}/images/wp-ios/hopper-search-charge-type.png)
+_**Figure 4: Response fields are being used in app**_
 
 Look back to the JSON response field `"localpath": "book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json"`, it's saying that this configuration file will be stored in local device (localpath) with the name **book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756** in app sandbox.
 Let `ssh` to device, then navigate to `/var/mobile/Containers/Data/Application/` folder. This is the place where all installed app sandboxes locate. Due to those are named as random UUIDs, there are some ways to find out which one is PATCHABLE sandbox folder:
 1. `ls -lat`: This command will list all of child directories/files of current directory and sorted by last modify date. If you just installed PATCHABLE app, this command will display PATCHABLE sandbox folder as the top one.
-[![List command]({{ site.baseurl }}/images/wp-ios/list-command.png)]({{ site.baseurl }}/images/wp-ios/list-command.png){:target="_blank"} <br/>**Figure 5: List and sort directories**<br/><br/>
+![List command]({{ site.baseurl }}/images/wp-ios/list-command.png)
+_**Figure 5: List and sort directories**_
+
 2. `find . -name "app-bundle-id.plist"`: This command will search plist file inside PATCHABLE sandbox (remember to replace `app-bundle-id.plist` with the one you found in `Info.plist` with key `Bundle identifier`)
-[![Find plist command]({{ site.baseurl }}/images/wp-ios/find-plist-command.png)]({{ site.baseurl }}/images/wp-ios/find-plist-command.png){:target="_blank"} <br/>**Figure 6: Find plist location**<br/><br/>
+![Find plist command]({{ site.baseurl }}/images/wp-ios/find-plist-command.png)
+_**Figure 6: Find plist location**_
 
 Using one of above command, we can identify that **FBD05B9A-9B57-4637-B8D4-13CFFC51A19A** is the PATHCHABLE sandbox directory. Navigate to this directory and search json file using `find . -name "book_list_ios_appstore_tablet_f79e2bfd42967bddc6089cd9a556c756.json"` we can see as below this file locates inside Document directory. BRAVO!!!
-[![Find json file]({{ site.baseurl }}/images/wp-ios/find-json-file.png)]({{ site.baseurl }}/images/wp-ios/find-json-file.png){:target="_blank"} <br/>**Figure 7: Find json file path**<br/><br/>
+![Find json file]({{ site.baseurl }}/images/wp-ios/find-json-file.png)
+_>**Figure 7: Find json file path**_
 
 It's very straight forward now, let open this file and modify item ids of Free bundle to include all ids and save the file. I will be using `nano` command to edit and save the file
-[![Modify json on local device]({{ site.baseurl }}/images/wp-ios/modify-json-nano-command.png)]({{ site.baseurl }}/images/wp-ios/modify-json-nano-command.png){:target="_blank"} <br/>**Figure 8: Modify json file on local device**<br/><br/>
+![Modify json on local device]({{ site.baseurl }}/images/wp-ios/modify-json-nano-command.png)
+_**Figure 8: Modify json file on local device**_
 
 
 After modifying and saving the file, let kill the app and relaunch (keep Burp Suite open to monitor requests), we will see nothing happen, locked cards still there. What went WRONG!!!!!
 
 Have a look on Burp Suite HTTP history tab, we notice that there is a new request to download json configuration file, hmm.....
-[![App redownload configuration file if it's modified]({{ site.baseurl }}/images/wp-ios/relaunch-app-redownload-configuration.png)]({{ site.baseurl }}/images/wp-ios/relaunch-app-redownload-configuration.png){:target="_blank"} <br/>**Figure 9: App re-downloads configuration file if it's modified**<br/><br/>
+![App redownload configuration file if it's modified]({{ site.baseurl }}/images/wp-ios/relaunch-app-redownload-configuration.png)
+_**Figure 9: App re-downloads configuration file if it's modified**_
 
 No doubt that this re-download file will overwrite the one we modified on previous step, so no wonder app did not take any effects of modified one. What we can do to prevent this re-download process whenever we modify local file???? Let's try to switch off mobile internet connection after modifying local file and relaunch the app, there will be no download file trigger due to no internet connection.
 
@@ -148,7 +160,8 @@ With Burp Suite **Intercept Server Responses** feature, we can setup to intercep
 
 ### Thanks God it's unlocked
 After modified response reach device, we can see that all locked card now unlocked and can be used as normal. We are done here???
-[![Intercept response with Burp Suite](https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=800&q=60)](https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=800&q=60){:target="_blank"} <br/>**Figure 11: It's over** _(source: unsplash by @Vasily Koloda)_<br/><br/>
+![Intercept response with Burp Suite](https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=800&q=60)
+_**Figure 11: It's over** *(source: unsplash by @Vasily Koloda)*_
 
 After digging around, I found out that there is another way to modify response body to unlock content also.
 Instead of modify item ids of free bundle, we can modify below values of premium bundle using Burp Suite **Match and Replace** feature, you can refer this [post]({{ site.baseurl }}/by-pass-locked-feature-iOS-apps-with-burp/){:target="_blank"} for how to use this feature.
@@ -162,7 +175,8 @@ One small tips is that using git to compare files change, so here is what we can
 - First, let copy all app sandbox folders from device to laptop, then using git as version control to commit all files inside locally.
 - Next, after content unlocked, copy all app sandbox again and paste on same location as step one, the popup will come out as files existed, so just REPLACE all files.
 - Using SourceTree as GUI to see what's new changes
-[![Compare app sandbox changes]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png)]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png){:target="_blank"} <br/>**Figure 12: sandbox files changed**<br/><br/>
+![Compare app sandbox changes]({{ site.baseurl }}/images/wp-ios/source-tree-comparation.png)
+_**Figure 12: sandbox files changed**_
 
 As we can see file **ssapp_property** has some new lines with key and value defined which bundles were purchased and there are some changes in same file to configure checksum of downloaded contents also. The file name and file content changes make more senses to what just happened to unlock process.
 To double confirm if new added lines `<key>is_purchased[StoreData.id=...]` are factors to lock premium contents, let remove those keys of this file which locates on device app sandbox `Document/ssapp_property` and relaunch the app, we will see that locked cards back.

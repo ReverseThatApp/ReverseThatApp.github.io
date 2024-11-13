@@ -1,13 +1,16 @@
 ---
 layout: post
 title: "Cracking the Flare-On 11 CTF 2024: Challenge 1 - Frog"
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczMc4Z0pvk-NzMtaw5InM5ZaRdvQYiryVJoQVvTHvZS4EmjlQoJZjRfkJxt10g2bByPFa2TXohKlsNdNF86Ji3nwKEQ-oqhvsqnsdqHHdMdQ-J3Ddd9YheV0-nzMOsZZpOOW3Zg-V7n2jHtrxNOps-jA=w734-h596-s-no-gm?authuser=2
+    alt: Challenge 1 - Frog
+tags: [flareon11, flareon-2024, ctf, flareon, python]
+categories: [CTF, Flareon 2024]
 ---
 
 Dive into my journey through the Flare-On 11 CTF Challenge! I tackled all 10 challenges this year, and in this series, I’ll break down my thought process, strategies, and discoveries. Whether you’re a beginner or an experienced CTF enthusiast, expect plenty of insights and detailed explanations to guide you through each step!
-[![Challenge 1 - Frog](https://lh3.googleusercontent.com/pw/AP1GczMc4Z0pvk-NzMtaw5InM5ZaRdvQYiryVJoQVvTHvZS4EmjlQoJZjRfkJxt10g2bByPFa2TXohKlsNdNF86Ji3nwKEQ-oqhvsqnsdqHHdMdQ-J3Ddd9YheV0-nzMOsZZpOOW3Zg-V7n2jHtrxNOps-jA=w734-h596-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczMc4Z0pvk-NzMtaw5InM5ZaRdvQYiryVJoQVvTHvZS4EmjlQoJZjRfkJxt10g2bByPFa2TXohKlsNdNF86Ji3nwKEQ-oqhvsqnsdqHHdMdQ-J3Ddd9YheV0-nzMOsZZpOOW3Zg-V7n2jHtrxNOps-jA=w734-h596-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - Frog** <br/><br/>
 
-
-# Overview
+## Overview
 The Flare-On Challenge is the [FLARE team's](https://cloud.google.com/security/mandiant-services) annual Capture-the-Flag (CTF) contest. It is a single-player series of Reverse Engineering puzzles that runs for 6 weeks every fall. [#flareon11](flare-on11.ctfd.io) is launching Sept. 27th 2024 at 8pm EST.
 
 This is the very first challenge and here is the description from the page.
@@ -19,7 +22,7 @@ This is the very first challenge and here is the description from the page.
 
 Download and unzip the file with password `flare` we can see a few files that are good to start
 
-```bashscript
+```bash
 $ ls
 README.txt
 fonts
@@ -30,11 +33,11 @@ img
 
 As we have the source code `frog.py`, we can directly jump into the codes for  understanding the game logic to find the flag, but what was the fun without seeing how does the game look like? There will be many approaches to solve this challenge, let start with normal one first.
 
-# Install dependencies
+## Install dependencies
 *This step is optional for Windows users and for ones who don't need to run the game.*
 
 The `frog.py` is importing `pygame`, hence we need to install this page. We can use pip3 to install `pygame` package:
-```bashscript
+```bash
 $ pip3 install pygame
 
 error: externally-managed-environment
@@ -73,7 +76,7 @@ hint: See PEP 668 for the detailed specification.
 ```
 As you can see, it recommends using a virtual environment instead of a system-wide installation to avoid risking issues with our Python setup or operating system. Let's follow the instructions to create a virtual environment instead.
 
-```bashscript
+```bash
 $ python3 -m venv path/to/venv
 $ source path/to/venv/bin/activate
 (venv) $ python3 -m pip install pygame
@@ -86,8 +89,8 @@ Successfully installed pygame-2.6.1
 
 We just ran three commands to create, activate, and install `pygame` in the virtual environment (you’ll notice the virtual environment is activated by the `(venv)` prefix).
 
-# Start the game - Run `frog.py`
-```bashscript
+## Start the game - Run `frog.py`
+```bash
 (venv) $ python3 frog.py
 pygame 2.6.1 (SDL 2.28.4, Python 3.13.0)
 Hello from the pygame community. https://www.pygame.org/contribute.html
@@ -99,7 +102,7 @@ After starting `frog.py` from the command line, you can see the game window appe
 
 We can use the arrow keys to move the frog step by step, but there is no way to get the frog close to the statue because the wall blocks our path.
 
-# Explore the source code - `frog.py`
+## Explore the source code - `frog.py`
 ```python
 import pygame
 
@@ -358,15 +361,15 @@ The code also includes a hard-coded `victory_tile = pygame.Vector2(10, 10)`, mea
 
 There is a `Block` class that stores each block's location and indicates if it's passable (allowing the frog to move over it). Additionally, there is a `Frog` class, which contains the frog's current location, an array of `blocks` containing `Block` instances (representing the wall we see on the game screen that blocks the frog from reaching the statue), an `AttemptPlayerMove` function to validate if the new position is a valid move (checking if the frog is out of screen boundaries or hitting the blocks), a `main` function to handle user keyboard inputs for moving the frog, and finally, a `GenerateFlagText` function, which decodes the encoded flag and displays it on the screen. With this information, we have enough to solve this challenge. There are several approaches to solve it, both with and without running the game.
 
-
-# 1st approach - Modify player starting position
+## Solutions
+### 1st approach - Modify player starting position
 
 In the source code, the player starts at column 1 and row 0 with `player = Frog(0, 1)`. Since we know the hard-coded `victory_tile = pygame.Vector2(10, 10)` position, we can change the player’s starting position to `player = Frog(10, 10)` instead and re-run the game. Kaboom!
 
 
 [![Modify player starting position - Kaboom!!!](https://lh3.googleusercontent.com/pw/AP1GczMIs7QqluXrsZsdvMiF5VqkPJzKfRqKAw-MIJO6D4Ye-EVQ1guXVF0R0GL8mglrkGjh4b97khymo6J2GSPCdmSE3azDaWhoD0UGf7AAiW3x436NfH-m6BKNHX25NkFobrHPTjUwF9ZPAmbJmIAENRXx=w734-h596-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczMIs7QqluXrsZsdvMiF5VqkPJzKfRqKAw-MIJO6D4Ye-EVQ1guXVF0R0GL8mglrkGjh4b97khymo6J2GSPCdmSE3azDaWhoD0UGf7AAiW3x436NfH-m6BKNHX25NkFobrHPTjUwF9ZPAmbJmIAENRXx=w734-h596-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 3 - Modify player starting position - Kaboom!!!** <br/><br/>
 
-# 2nd approach - Make blocks passable
+### 2nd approach - Make blocks passable
 
 Now let’s have a bit of fun and allow the frog to leap over the blocks! To do this, we can force `passable` to always be `True` regardless of the value passed into the `Block` constructor, like this:
 
@@ -387,7 +390,7 @@ class Block(pygame.sprite.Sprite):
 Re-run the game, and let the kids have fun! ^_^
 [![Do you see the frog can leap?](https://lh3.googleusercontent.com/pw/AP1GczOrPT009IfwzZK7JbwHQ1kCtyBiC6Mk0gHd-CCHifs-RrerQPrlQJza_gZRhht4mFIasWH1DczPd8aCpu3P8drOymkpyWjkSKQA5KoydA7Jv-s-VIS2dgKQShJB6yifKWLpEwVE4CCemaAcajedHya-=w1350-h1096-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczOrPT009IfwzZK7JbwHQ1kCtyBiC6Mk0gHd-CCHifs-RrerQPrlQJza_gZRhht4mFIasWH1DczPd8aCpu3P8drOymkpyWjkSKQA5KoydA7Jv-s-VIS2dgKQShJB6yifKWLpEwVE4CCemaAcajedHya-=w1350-h1096-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 4 - Do you see the frog can leap?** <br/><br/>
 
-# 3rd approach - Find the XOR key
+### 3rd approach - Find the XOR key
 
 The above approaches require patching and running the game, which means setting up a Python environment. But what if we don’t want that and prefer to just use static analysis?
 
@@ -416,7 +419,7 @@ We know some `decrypted_c` characters from the plain text email. Let’s take th
 `key = ord(encrypted_c) ^ ord(decrypted_c) = 0xbf ^ ord('m') = 210`
 
 Now we have the `key` value recovered and can use this key to decode the flag.
-```bashscript
+```bash
 $ python3
 Python 3.13.0 (main, Oct  7 2024, 05:02:14) [Clang 15.0.0 (clang-1500.3.9.4)] on darwin
 Type "help", "copyright", "credits" or "license" for more information.
@@ -428,6 +431,6 @@ welcome_to_11@flare-on.com
 >>>
 ```
 
-# Conclusion
+## Conclusion
 
 The first challenge is usually an easy warm-up, and we’ve explored a few approaches to tackle it. In any case, this has been a fun game to play with the kids ^_^

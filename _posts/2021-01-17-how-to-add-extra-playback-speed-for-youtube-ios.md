@@ -1,10 +1,14 @@
 ---
 layout: post
 title: How to add extra playback speed for YouTube iOS?
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczNVpcjzL2zv-10Ti-ZH76VkvD39sod7arfet8D2CVJQ8ttK1ocw5FE_JSUcUvGaMFu-dG0j8QwDnlXgykd_Jdpb7VkKt0fcW8t3WUwcm-5urH1ExZXs0WhpCdQi6W_Y77uN1g0m-9Pu5glH_4FfGrI5=w1054-h926-s-no-gm?authuser=2
+    alt: Playback Speed 3x
+tags: [ios]
 ---
 
 In this post, we will reverse the Youtube app to know how to add custom playback speed and understand why it does not work straight forward. 
-[![Playback Speed 3x]({{ site.baseurl }}/images/20210117/youtube-playback-speed-3x.jpeg)]({{ site.baseurl }}/images/20210117/youtube-playback-speed-3x.jpeg){:target="_blank"} <br/>**Figure: Playback Speed 3x** <br/><br/>
+![Playback Speed 3x](https://lh3.googleusercontent.com/pw/AP1GczOGjyvysS0uSWLfQmyyZr2sDhOQM0Be-cGvS2Nf2VTNYyi_ZXKzuhc5bSBW_qULdk-f57XkEtkwBdESHXUKK2U9nrmFD6HFqiUwXr6iLpc-1m1G1LjMDynK2DKvpZWpR2CJD8SpWts_dct8fGsoUASC=w640-h1136-s-no-gm?authuser=2)
 
 ## Disclaimer
 This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues.
@@ -27,31 +31,32 @@ It looks like only 3 executable files you need to check: `YouTube` (14.9MB), and
 
 ### Where playback speeds are setup?
 It's a bit tricky to figure out where speed is used, but if you select the **Playback speed** option from playing video, you will see there are **8** predefined ones.
-```bashscript
+```
     0.25x
     0.5x
     0.75x
-✔️  1x 
+✔️   1x 
     1.25x
     1.5x
     1.75x
     2x
 ```
+{: .nolineno }
 
 By searching these values, we hope it will be appeared in the binary and trace from there. Running this `strings` command for `Module_Framework` file from terminal to search for value `0.25x`, we can see there is one result as below:
-```bashscript
+```bash
 $ strings Frameworks/Module_Framework.framework/Module_Framework | grep "0\.25x"
 varispeed.0.25x
 ```
 
 Let load the `Module_Framework` file into **Hopper Disassembler** to find down where it was used. By searching `varispeed.0.25x` in the `Str` (String) tab, you will see it's used in `-[YTVarispeedSwitchController init]`.
-```bashscript
+```bash
 cfstring_varispeed_0_25x:
 000000000484a750         dq         0x00000000065a4360, 0x00000000000007c8, 0x0000000003d0f9bc, 0x000000000000000f ; "varispeed.0.25x", DATA XREF=-[YTVarispeedSwitchController init]+104
 ```
 
 Double click on that method, it will navigate to the method implementation:
-```bashscript
+```bash
 -[YTVarispeedSwitchController init]:
 ...
 add        x0, x0, #0x750 ; 0x484a750@PAGEOFF, @"varispeed.0.25x"
@@ -81,7 +86,7 @@ str        x0, [x19, #0x8] ; objc_ivar_offset_YTVarispeedSwitchController__optio
 ```
 
 This is the constructor of `YTVarispeedSwitchController` class. It is trying to get the real speed text to display using `_GetPlayerString` method and construct the option for each rate using `@selector(initWithTitle:rate:)` selector. Each option will be eventually added into an array with the size of **8** elements, and then stored into `_ivar YTVarispeedSwitchController._options`
-```bashscript
+```bash
 0000000004f40bc8         struct __objc_ivars { ; DATA XREF=__objc_class_YTVarispeedSwitchController_data
                              32,                                  // entsize
                              3                                    // count
@@ -100,7 +105,7 @@ So this is the method we can add our extra speeds. Let write a tweak to add some
 ### Add extra playback speeds
 By using [Theos](https://github.com/theos/theos/wiki){:target="_blank"} and hook into `YTVarispeedSwitchController.init` method, we can add some extra speeds such as 0.1, 2.25, 2.5, 3.0, 3.5, 4.0 and store into `_options ivar` (refer my previous posts for how to write a tweak using Theos).
 
-```bashscript
+```bash
 %hook YTVarispeedSwitchController
 
 -(void *)init {
@@ -145,7 +150,7 @@ However, tapping on any extra speeds does not make any difference. Any selected 
 
 ### Show me the way to Playback speed boundary check
 We need to figure out the proper way to trace the flow instead of looking for every method in the huge binary file. When we select a speed option, it should be internally called the setter methods, so start searching with `setPlayback*` in **Hopper Disassembler** we can see that there are multiple selector matching `setPlaybackRate:` with the input is `float` type. These methods are the ones we can hook or put a breakpoint to debug to understand the flow. However, we can do a quick check by hooking into those methods and log the input value to see when the playback speed is reset, like below:
-```bashscript
+```bash
 %hook YTLocalPlaybackController
 -(void)setPlaybackRate:(float)arg2 {	
 	%log;
@@ -168,11 +173,12 @@ We need to figure out the proper way to trace the flow instead of looking for ev
 ```
 
 Install the tweak again and restart YouTube app, open Mac `Console` app to filtering the YouTube logs, once select new speed option `3.5x` we can see the logs as below:
-[![2: Playback speed trace]({{ site.baseurl }}/images/20210117/theos-set-playback-speed-trace.png)]({{ site.baseurl }}/images/20210117/theos-set-playback-speed-trace.png){:target="_blank"} <br/>**Figure 2: Playback speed trace** <br/><br/>
+![2: Playback speed trace](https://lh3.googleusercontent.com/pw/AP1GczNUZAP3iVUH3-qocqlRtgvebwPzQ49LX3hCSMG_9SEXik2lUcSDZUxwfduTx9z-RQRMMOZVIJ6t2SfckRrgeUhFHybZ8ZlbgUNZd8chIZWXAqleTNX3u6k-nnsQb4fv9KppyKy1TwXHYGKbeGFKlBof=w2828-h472-s-no-gm?authuser=2)
+_**Figure 2: Playback speed trace**_
 
 As you can see all speed rate values are logged as `3.500000` which is the one we selected, however, it is reset to `2.000000` after `-[<YTSingleVideoController: 0x1c43c2fd0> setPlaybackRate:3.500000]` and before `-[<YTSingleVideoController: 0x1c43c2fd0> playerRateDidChange:2.000000]` - the highlighted ones. It's time to stop dynamic analysis for a while and get our brain dirty to see what's going on inside `-[YTSingleVideoController setPlaybackRate:]` method.
 
-```bashscript
+```bash
 /* @class YTSingleVideoController */
 -(void)setPlaybackRate:(float)arg2 {
     r2 = arg2;
@@ -196,7 +202,7 @@ As you can see all speed rate values are logged as `3.500000` which is the one w
 ```
 
 `*(r0 + 0xa0)` is accessing to `ivar` of `YTSingleVideoController` with an offset `0xa0`:
-```bashscript
+```bash
     objc_ivar_offset_YTSingleVideoController__lifecycleState:
 000000000578de10         db  0xa0 ; '.'  ; DATA XREF=0x4f150e8
 000000000578de11         db  0x00 ; '.'
@@ -207,14 +213,14 @@ As you can see all speed rate values are logged as `3.500000` which is the one w
 The idea of this method is to check if `_lifecycleState` equals to `2` and `self.supportsChangingPlaybackRate` is `true` then it will invoke `self._player.setRate(3.5)`. This method does not change the value of speed, so the place could change it might be inside the `setRate:` method.
 
 `*(r19 + 0x8)` is `MLPlayer` type:
-```bashscript
+```bash
     objc_ivar_offset_YTSingleVideoController__player:
 000000000578ddbc         db  0x08 ; '.'  ; DATA XREF=0x4f14e48
 000000000578ddbd         db  0x00 ; '.'
 000000000578ddbe         db  0x00 ; '.'
 000000000578ddbf         db  0x00 ; '.'
 ```
-```bashscript
+```bash
 0000000004f14e48         struct __objc_ivar { ; "_player","@\\\"<MLPlayer>\\\""
                              objc_ivar_offset_YTSingleVideoController__player, // offset pointer
                              aPlayer,                             // name
@@ -227,7 +233,7 @@ The idea of this method is to check if `_lifecycleState` equals to `2` and `self
 Double click on the `setRate:` selector, many classes are implementing this, such as `MLHAMPlayer, MLHAMQueuePlayer, MLAVPlayer, MLAVAssetPlayer...`. To quickly identify which is the one, in this case, let use `LLDB` to attach into running YouTube process set a breakpoint to this `setRate:` method call.
 
 Toggle back to Assembly mode, we need to set the breakpoint at address `0x100a768 + ASLR` of `Module_Framework` binary.
-```bashscript
+```bash
     -[YTSingleVideoController setPlaybackRate:]:
 ...
 0100a74c	ldr		x0, [x19, #0x8]
@@ -241,7 +247,7 @@ Toggle back to Assembly mode, we need to set the breakpoint at address `0x100a76
 ...
 ```
 Launch `LLDB`, attach and set a breakpoint, in this case, `ASLR` value of `Module_Framework` is `0x0000000101cc8000`:
-```bashscript
+```bash
 Target 0: (YouTube) stopped.
 (lldb) image list -o -f Module_Framework
 [  0] 0x0000000101cc8000 /private/var/containers/Bundle/Application/33FF9AB6-2F88-4306-86FD-642DFD943773/YouTube.app/Frameworks/Module_Framework.framework/Module_Framework(0x0000000101cc8000)
@@ -253,7 +259,7 @@ Process 5781 resuming
 ```
 
 We've just managed to successfully set a new breakpoint at address `0x102cd2768` (at the instruction to execute the `setRate:` method). Now it's time to trigger set playback speed again with value `3.5x` from playing YouTube video.
-```bashscript
+```bash
 Process 5781 stopped
 * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
     frame #0: 0x0000000102cd2768 Module_Framework` ___lldb_unnamed_symbol89579$$Module_Framework  + 80
@@ -266,7 +272,7 @@ Module_Framework`___lldb_unnamed_symbol89579$$Module_Framework:
 ```
 
 It stopped at our breakpoint, which's a good sign that we're on the right track. To know which instance trigger `setRate:`, we only need to examine register `x0` using the `po` command:
-```bashscript
+```bash
 (lldb) po $x0
 <MLHAMQueuePlayer: 0x10f0904b0>
 (lldb)
@@ -275,7 +281,7 @@ It stopped at our breakpoint, which's a good sign that we're on the right track.
 It's clear now that `-[MLHAMQueuePlayer setRate:]` is the method we need to look at in this case, thanks to `LLDB` and YouTube (for no anti-debugging mechanism).
 
 ### Playback speed boundary check in the `-[MLHAMQueuePlayer setRate:]`
-```bashscript
+```bash
 -[MLHAMQueuePlayer setRate:]:
 stp        d9, d8, [sp, #-0x40]! ; DATA XREF=0x4f67720
 stp        x22, x21, [sp, #0x10]
@@ -292,7 +298,7 @@ b.ne       loc_10a4930
 ```
 
 Do you see `fminnm` and `fmaxnm` instructions? These are Floating-point Minimum/Maximum Number (scalar) instructions that compare the first and second source register values and write the smaller/larger of the two floating-point values to the destination register, in our case `s0` register is holding the value of speed rate `3.500000`.
-```bashscript
+```bash
 fmov       s1, #0x4000000000000000 ; #2.0 in float
 fminnm     s0, s0, s1 ; s0 = min (3.5, 2.0) = 2.0
 fmov       s1, #0x3fd0000000000000 ; #0.25 in float
@@ -303,7 +309,7 @@ fcmp       s0, s8 ; self._rate == 2.0
 
 With the above inline comments, you can see that custom speed needs to be in the range of `[0.25, 2.0]`, otherwise it will be reset to the nearest boundary. We are passing the value of speed rate is `3.5` into this `setRate:` method, with these `fminnm` and `fmaxnm` instructions it resets the value to become `2.0` which is reflecting on the YouTube app, so here is the client-side speed validation we are looking for. If you're not convinced yet, let look a bit further instructions inside this method to see what it's doing after this validation:
 
-```bashscript
+```bash
 /* @class MLHAMQueuePlayer */
 -(void)setRate:(float)arg2 {
     r0 = self;    
@@ -333,7 +339,7 @@ With the above inline comments, you can see that custom speed needs to be in the
 ```
 
 The whole idea of this method is it will check the current speed rate `self._rate` with new value `s8` (after boundary check), if it's the same then it will do nothing, otherwise, it will check the configuration if this kind of video is supported multiple speed (`varispeedAllowed`) then will update current speed rate `self._rate` to the new value and invoke `internalSetRate` (you can't change the playback speed for live stream video, that would make more sense for this checking condition). Wonder what does `internalSetRate` method do? Here is your answer:
-```bashscript
+```bash
 /* @class MLHAMQueuePlayer */
 -(void)internalSetRate {
     dispatch_async(*(self + 0x18), &var_38); // [self._player setRate:self._rate] (HAMPlayerInternal)
@@ -350,7 +356,7 @@ As the method name, it updates the new speed rate internally and broadcast the r
 ### Disable speed boundary check
 As we've already known `-[MLHAMQueuePlayer setRate:]` is the one doing speed validation, we have multiple options to disable it, such as binary patching (replace `fminnm` and `fmaxnm` instructions with `fmov s8, s0` to accept any inputs), hooking (use `theos` tweak). This time, we will go with the hooking approach, which we are trying to rewrite this method again without min-max conditions. We will try to convert the above assembly and pseudo code of `-[MLHAMQueuePlayer setRate:]` into a new tweak method using Objective-C, it will look like this:
 
-```bashscript
+```bash
 %hook MLHAMQueuePlayer
 
 -(void)setRate:(float)rate {	
@@ -383,7 +389,7 @@ As we've already known `-[MLHAMQueuePlayer setRate:]` is the one doing speed val
 ```
 
 By building this again, you will get compiler error like this:
-```bashscript
+```bash
 error: unknown type name 'MLHAMPlayerItemSegment'
 MLHAMPlayerItemSegment *_currentSegment = MSHookIvar<MLHAMPlayerItemSegment *>(self, "_currentSegment");
 ...

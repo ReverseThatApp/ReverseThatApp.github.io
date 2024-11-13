@@ -1,22 +1,26 @@
 ---
 layout: post
 title: "Cracking the Flare-On 11 CTF 2024: Challenge 2 - Checksum"
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczPuUm_pFiCyEgh6r1Zdbq9r8T07IPkcAVBeWxqFNpeZkUGUcDYEGqoUO77RLIRye4D7wK9TUCcm7_FO0vG7hq9y3TJEYh5soUNjQjfF0pjIdmeSncv-tTEtbaK4OhF5jWJQ1xyPYH9oQkiByKPMvg06=w1954-h1022-s-no-gm?authuser=2
+    alt: Challenge 2 - Checksum
+tags: [flareon, flareon11, flareon-2024, ctf, windows, golang]
+categories: [CTF, Flareon 2024]
 ---
 We recently came across a silly executable that appears benign. It just asks us to do some math... From the strings found in the sample, we suspect there are more to the sample than what we are seeing. Please investigate and let us know what you find!
-[![Challenge 2 - Checksum](https://lh3.googleusercontent.com/pw/AP1GczPuUm_pFiCyEgh6r1Zdbq9r8T07IPkcAVBeWxqFNpeZkUGUcDYEGqoUO77RLIRye4D7wK9TUCcm7_FO0vG7hq9y3TJEYh5soUNjQjfF0pjIdmeSncv-tTEtbaK4OhF5jWJQ1xyPYH9oQkiByKPMvg06=w1954-h1022-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczPuUm_pFiCyEgh6r1Zdbq9r8T07IPkcAVBeWxqFNpeZkUGUcDYEGqoUO77RLIRye4D7wK9TUCcm7_FO0vG7hq9y3TJEYh5soUNjQjfF0pjIdmeSncv-tTEtbaK4OhF5jWJQ1xyPYH9oQkiByKPMvg06=w1954-h1022-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - Checksum** <br/><br/>
 
-# Challenge description
+## Challenge description
 >2 - checksum
 >
 >We recently came across a silly executable that appears benign. It just asks us to do some math... From the strings found in the sample, we suspect there are more to the sample than what we are seeing. Please investigate and let us know what you find!
 
-# Run the Challenge
+## Run the Challenge
 Run `checksum.exe`, which will display a console application and prompt us with a series of math questions. If the answers are correct, it will repeat the questions a few times, followed by a **"Checksum"** prompt for input. If any math answers or the checksum input are incorrect, the application terminates without a trace.
 
-# Analysis with Ghidra
+## Analysis with Ghidra
 For this challenge, we’ll use `Ghidra` for static analysis, as it yields better results than `IDA`. Once we load `checksum.exe` into `Ghidra`, it displays the Ghidra Import Results Summary dialog as shown below:
 
-```bascript
+```
 Project File Name:                  checksum.exe
 Language ID:                        x86:LE:64:default (4.1)
 Compiler ID:                        golang
@@ -32,19 +36,20 @@ Golang main package path:           flareon/chuong/checksum
 Golang main package version:        (devel)
 ...
 ```
+{: .prompt-info }
 
 As we can see, this console app is written in the `Go` language, version `1.22.2`, and the author of this challenge is `chuong` (more precisely, `chuong.dong`, as you’ll later see in Ghidra with a path like `Golang source: C:/Users/chuong.dong/Exclusions/check_sum/checksum.go:40`).
 
 Once `Ghidra` completes its analysis, let’s hop into the `Strings` window (`Window -> Defined Strings`) and look for where the **`Checksum:`** string is being used.
 
-[![Checksum string XREFs](https://lh3.googleusercontent.com/pw/AP1GczN8z9BoVP_ggMybQzah_x63BdJyyZrD9vhtW4p6MCtZVORn1HGAftHRkthM5ikwhudxiQXtdao_YMyIu95h3EtxJu42dbveOHwYKhmeM3okdDgUer8Kh2sq5aAQNwV2X7wMyU4hQ80PBWIbiYbERcXK=w2828-h1234-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczN8z9BoVP_ggMybQzah_x63BdJyyZrD9vhtW4p6MCtZVORn1HGAftHRkthM5ikwhudxiQXtdao_YMyIu95h3EtxJu42dbveOHwYKhmeM3okdDgUer8Kh2sq5aAQNwV2X7wMyU4hQ80PBWIbiYbERcXK=w2828-h1234-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 2 - Checksum string XREFs** <br/><br/>
+![Checksum string XREFs](https://lh3.googleusercontent.com/pw/AP1GczN8z9BoVP_ggMybQzah_x63BdJyyZrD9vhtW4p6MCtZVORn1HGAftHRkthM5ikwhudxiQXtdao_YMyIu95h3EtxJu42dbveOHwYKhmeM3okdDgUer8Kh2sq5aAQNwV2X7wMyU4hQ80PBWIbiYbERcXK=w2828-h1234-s-no-gm?authuser=2)
+_**Figure: 2 - Checksum string XREFs**_
 
 We can see that the **`Checksum:`** string in the app console is referenced in the `main.main` method. In the **Symbol Tree** on the left panel, alongside the `main.main` function, there are also `main.a` and `main.b` functions. Let’s take a quick look at these as well.
 
-## `main.b` function
-```C
+### `main.b` function
+```c
 void main::main.b(error err,string errorString)
-
 {
   internal/abi.Type *piVar1;
   undefined8 uVar2;
@@ -79,8 +84,8 @@ void main::main.b(error err,string errorString)
 
 Thanks to the `Ghidra` decompiler, we can clearly see that this is a helper function that checks if the `error err` passed in is not nil. If it’s not nil, it prints the `string errorString` and exits the console app; otherwise, it does nothing. We can rename this function to `main.b_exitIfHasError` for readability.
 
-## `main.a` function
-```C
+### `main.a` function
+```c
 bool main::main.a(string checksum)
 
 {
@@ -183,10 +188,10 @@ Recovered checksum: 7fd7dd1d0e959f74c133c13abb740b9faa61ab06bd0ecd177645e93b1e38
 
 If we use this input to test the console app again, it still exits after the checksum input without showing any output. It’s time to trace back how `main.a` is being used. Before that, let’s rename this method to `main.a_validate_checksum`.
 
-## `main.main` Function
+### `main.main` Function
 Let’s trace the XREFs of `main.a_validate_checksum`. It’s being called from the `main.main` function. Below is the snippet where it’s called:
 
-```C
+```c
 if (local_188 <= iVar2) {
     file_full_path = runtime::runtime.slicebytetostring((runtime.tmpBuf *)local_1e8,ptr,local_168)
     ;
@@ -252,10 +257,11 @@ As we can see, once the checksum is validated, it concatenates the `os::os.UserC
 Navigate to that location, and you’ll find the newly created image with the FLAGGGGGGGGG: `Th3_M4tH_Do_b3_mAth1ng@flare-on.com`
 
 
-[![The flag](https://lh3.googleusercontent.com/pw/AP1GczMMDqbAZAHs1L3aL_LW1zwtPoz_S4WQo_wDQHFOU4MsZO07LyvF-ON7t5qCXt7HiXmeEdEpoY8SkbcWzUGEcW2n3Tt5g4I3hRDAGg4v6-0kjPgp-WhP5jJgaBfAMllT25D3GGSULGSjHnOgr5a3V90r=w1403-h920-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczMMDqbAZAHs1L3aL_LW1zwtPoz_S4WQo_wDQHFOU4MsZO07LyvF-ON7t5qCXt7HiXmeEdEpoY8SkbcWzUGEcW2n3Tt5g4I3hRDAGg4v6-0kjPgp-WhP5jJgaBfAMllT25D3GGSULGSjHnOgr5a3V90r=w1403-h920-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 3 - The flag** <br/><br/>
+![The flag](https://lh3.googleusercontent.com/pw/AP1GczMMDqbAZAHs1L3aL_LW1zwtPoz_S4WQo_wDQHFOU4MsZO07LyvF-ON7t5qCXt7HiXmeEdEpoY8SkbcWzUGEcW2n3Tt5g4I3hRDAGg4v6-0kjPgp-WhP5jJgaBfAMllT25D3GGSULGSjHnOgr5a3V90r=w1403-h920-s-no-gm?authuser=2)
+_**Figure: 3 - The flag**_
 
-## How about the remaining logic of `main.main` function?
+### How about the remaining logic of `main.main` function?
 A top-down approach isn’t always ideal; this time, we used a bottom-up approach, tracing back to avoid *unnecessary* logic while still retrieving the flag. If you want to understand the entire app’s logic, I’ll leave that exploration up to you! :P
 
-# Conclusion
+## Conclusion
 This challenge involves a bit more reversing compared to the first one, as we need to dig into the binary without source code. Additionally, the app is written in Golang, but luckily, the symbols aren’t entirely stripped, and `Ghidra` provides excellent decompilation, making the reversing process smooth.

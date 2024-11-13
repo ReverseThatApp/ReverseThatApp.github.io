@@ -1,44 +1,49 @@
 ---
 layout: post
 title: "Cracking the Flare-On 11 CTF 2024: Challenge 4 - Meme Maker 3000"
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczOEMCXdYQXjlO2NTNW6t-yxDSkcGgkwUrMHcW8MsNmxRNLfjpQdTrsgwOadQEKdJT0BH8vTWS8hjY4VqCKz7JkpJxeptjfAX_SXEcQeETSdFJeWwtZkQZL3G4s8CEE1URbihYzofjw-_R-1duWRTtPV=w2444-h1398-s-no-gm?authuser=2
+    alt: Challenge 4 - Meme Maker 3000
+tags: [flareon, flareon11, flareon-2024, ctf, javascript, obfuscated]
+categories: [CTF, Flareon 2024]
 ---
 
 Given a deceptively "simple" `mememaker3000.html` file weighing in at `2.5MB` and packed with obfuscated JavaScript—don't panic! At first glance, the file might feel like a cosmic joke on developers, but I dove in and found a way to deobfuscate it. Turns out, hunting for a flag has never been this entertaining. Let's get our digital magnifying glass and dive in!
-[![Challenge 4 - Meme Maker 3000](https://lh3.googleusercontent.com/pw/AP1GczOEMCXdYQXjlO2NTNW6t-yxDSkcGgkwUrMHcW8MsNmxRNLfjpQdTrsgwOadQEKdJT0BH8vTWS8hjY4VqCKz7JkpJxeptjfAX_SXEcQeETSdFJeWwtZkQZL3G4s8CEE1URbihYzofjw-_R-1duWRTtPV=w2444-h1398-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczOEMCXdYQXjlO2NTNW6t-yxDSkcGgkwUrMHcW8MsNmxRNLfjpQdTrsgwOadQEKdJT0BH8vTWS8hjY4VqCKz7JkpJxeptjfAX_SXEcQeETSdFJeWwtZkQZL3G4s8CEE1URbihYzofjw-_R-1duWRTtPV=w2444-h1398-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - Meme Maker 3000** <br/><br/>
 
-# Challenge description
+## Challenge description
 > 4 - Meme Maker 3000
 >
 >You've made it very far, I'm proud of you even if noone else is. You've earned yourself a break with some nice HTML and JavaScript before we get into challenges that may require you to be very good at computers.
 
-# The Main `mememaker3000.html` File
+## The Main `mememaker3000.html` File
 Even though this is an `.html` file, it barely contains any HTML—most of it is a dense block of JavaScript logic. The user interface is as minimalist as it gets, with just a dropdown list to generate funny images and texts. It’s almost as if HTML was just invited to the party to watch JavaScript do all the heavy lifting!
 
-[![Meme Maker 3000 interface](https://lh3.googleusercontent.com/pw/AP1GczMi8MeGdUpHITKs9tJoqqToz5SEWUqA1i68c_E4GmwEEtGc3egWLAS6qmEPlUajdzZugSNAxgxjphRuWKhMnfCXqMzJXPxNvdLfRTM4m3Ze5om2GW3zbAFecF92-KGwxgGxMumI41erCkq_Pl8GJCr3=w1698-h1290-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczMi8MeGdUpHITKs9tJoqqToz5SEWUqA1i68c_E4GmwEEtGc3egWLAS6qmEPlUajdzZugSNAxgxjphRuWKhMnfCXqMzJXPxNvdLfRTM4m3Ze5om2GW3zbAFecF92-KGwxgGxMumI41erCkq_Pl8GJCr3=w1698-h1290-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 2 - Meme Maker 3000 interface** <br/><br/>
+![Meme Maker 3000 interface](https://lh3.googleusercontent.com/pw/AP1GczMi8MeGdUpHITKs9tJoqqToz5SEWUqA1i68c_E4GmwEEtGc3egWLAS6qmEPlUajdzZugSNAxgxjphRuWKhMnfCXqMzJXPxNvdLfRTM4m3Ze5om2GW3zbAFecF92-KGwxgGxMumI41erCkq_Pl8GJCr3=w1698-h1290-s-no-gm?authuser=2)
+_**Figure: 2 - Meme Maker 3000 interface**_
 
 Nothing fancy or interesting here—so let's hop into the JavaScript code to see what secrets it’s trying to hide.
 
-# Obfuscated JavaScript Logic
+## Obfuscated JavaScript Logic
 
 Drop `mememaker3000.html` into a text editor, and you’ll spot a massive obfuscated JavaScript block embedded between the `<script></script>` tags at the bottom of the page. Here’s a sneak peek at how it looks:
-```javascript
+```js
 const a0p=a0b;(function(a,b){const o=a0b,c=a();while(!![]){try{const d=parseInt(o(0xd7ed))/0x1*(parseInt(o(0x381d))/0x2)+-parseInt(o(0x10a7f))/0x3*(-parseInt(o(0x15fd2))/0x4)+parseInt(o(0x128f8))/0x5+-parseInt(o(0x1203c))/0x6+parseInt(o(0xe319))/0x7*(parseInt(o(0xe69f))/0x8)+-parseInt(o(0x17d84))/0x9+parseInt(o(0x6866))/0xa*(-parseInt(o(0x2e3b))/0xb);if(d===b)break;else c['push'](c['shift']());}catch(e){c['push'](c['shift']());}}}(a0a,0x56f9f));const a0c=[a0p(0x14c8f)+a0p(0x114df)+a0p(0x17cca)+a0p(0xcd68)+'verflo'+a0p(0xccba)+'egacy\x20'+a0p(0x7d61),a0p(0x13c3f)+a0p(0x10d3)+a0p(0x17a2),a0p(0x14c8f)+'ou\x20dec'+a0p(0x8440)+a0p(0xd950)+'bfusca'+'ted\x20co'+a0p(0x143ce)+a0p(0x562f)+'kes\x20pe'+a0p(0x17b7c)+a0p(0x10d4a),a0p(0x257)+'er\x20a\x20w'+a0p(0x16235)+a0p(0x168a9)+a0p(0xbbc2)+a0p(0x6e47)+'ng','When\x20y'+a0p(0xd14e)+'compil'+'er\x20cra'+'shes',a0p(0x1525f)+a0p(0x2220)+a0p(0x18635)+a0p(0x12631)+a0p(0xd3c7),'Securi'+'ty\x20\x27Ex'+a0p(0x11370),'AI',a0p(0x12de4)+a0p(0x11202)+',\x20but\x20'+'can\x20yo'+a0p(0x3968)+'\x20it?',a0p(0x14c8f)+a0p(0x1a83)+a0p(0xabcf)+a0p(0x293c)+a0p(0x8e99)+'e\x20firs'+a0p(0xe162),a0p(0x100c0)+a0p(0x8c1b)+a0p(0x3bba)+a0p(0xb640)+a0p(0x1490f),'Readin'+'g\x20some'+a0p(0x16a1a)+a0p(0xa262)+a0p(0x247),a0p(0x15660),'This\x20i'+'s\x20fine',a0p(0x17f91)+'On',a0p(0xee13)+a0p(0xacec)+a0p(0xf9a7),'string'+a0p(0xa56b),a0p(0x9e4)+a0p(0x1734)+a0p(0xe903)+'t.','When\x20y'+a0p(0x114df)+a0p(0x17ec6)+a0p(0xb32e)+a0p(0x17ef4)+a0p(0x131d8)+'oit',a0p(0xb307)+'ty\x20thr'+'ough\x20o'+a0p(0x11fca)+'ty',a0p(0x104a)+'t\x20Coff'+'ee',a0p(0x132af),a0p(0x2c4)+'e','$1,000'+a0p(0x77d2),'IDA\x20Pr'+'o',a0p(0xb307)+a0p(0xf501)+a0p(0x17d36)],a0d={'doge1':[[a0p(0xcdee),a0p(0xbb66)],[a0p(0xcdee),a0p(0xb06c)]],'boy_friend0':[[a0p(0xcdee),a0p(0xbb66)],[a0p(0x16ec5),'60%'],[a0p(0x18399),a0p(0x18399)]],'draw':[['30%',a0p(0x6070)]],'drake':[[a0p(0x7f30),a0p(0xcdee)],[a0p(0x34ae),a0p(0xcdee)]],'two_buttons':
 ...
 ...
 ...
 ```
 
-You can refer to the [full obfuscated script here](https://gist.githubusercontent.com/ReverseThatApp/1327cb5152b1df254d4c4b561a25d350/raw/5b6cd8bbff860989679af30a5d8545c2584aa2d1/extracted_meme_maker_3000.js). At first glance, it looks weird and hard to understand, but with a closer look, a few patterns emerge—like the use of `parseInt()`, the `a0p` function, and some heavy concatenation. The `a0p` function seems to accept an index and return a string for concatenation, making it likely a string decryption function.
+At first glance, it looks weird and hard to understand, but with a closer look, a few patterns emerge—like the use of `parseInt()`, the `a0p` function, and some heavy concatenation. The `a0p` function seems to accept an index and return a string for concatenation, making it likely a string decryption function.
 
 We can quickly confirm this by opening the `.html` file in the browser, using browser `Dev Tools` to inspect values. For example, executing `a0p(0x14c8f)+a0p(0x114df)+a0p(0x17cca)+a0p(0xcd68)` will return `'When you find a buffer o'`. 
 
 Since the `a0p` function is called many times for decryption, manually decrypting and replacing each call would be tedious. Instead, let’s see if there’s an existing deobfuscator. Luckily, this JavaScript obfuscation technique isn’t new, and [deobfuscate.relative.im](https://deobfuscate.relative.im/) is an online tool that can handle it for us.
 
-# Deobfuscating JavaScript with [deobfuscate.relative.im](https://deobfuscate.relative.im/)
+## Deobfuscating JavaScript with [deobfuscate.relative.im](https://deobfuscate.relative.im/)
 
 Simply copy the obfuscated script and paste it into the portal, which will deobfuscate and format it nicely for us. Below is the fully deobfuscated code (with embedded base64 image data removed for readability).
 
-```javascript
+```js
 const a0c = [
     'When you find a buffer overflow in legacy code',
     'Reverse Engineer',
@@ -202,9 +207,9 @@ a0n.addEventListener('keyup', () => {
 })
 ```
 
-You can refer to the [fully deobfuscated code here](https://gist.github.com/ReverseThatApp/f13f0e1fbf13a2591cd3133a8c6445cd). The code is now much cleaner and easier to understand, so we can dive right into the reversing process without any issues. But before we do, let’s refactor it a bit to add meaningful variable and function names based on the context. The refactored code will look like this:
+The code is now much cleaner and easier to understand, so we can dive right into the reversing process without any issues. But before we do, let’s refactor it a bit to add meaningful variable and function names based on the context. The refactored code will look like this:
 
-```javascript
+```js
 const meme_captions_array = [
     'When you find a buffer overflow in legacy code',
     'Reverse Engineer',
@@ -368,11 +373,11 @@ caption3_element.addEventListener('keyup', () => {
 })
 ```
 
-# Find the Flag
+## Find the Flag
 
 With the code now easier to understand, we can quickly spot the flag logic in the `validate_conditions_and_show_flag()` function by noting the base64-encoded string `'Q29uZ3JhdHVsYXRpb25zISBIZXJlIHlvdSBnbzog'` which decodes to `'Congratulations! Here you go: '`. Usually, where high-entropy data appears, the flag is nearby—so let’s focus on this `validate_conditions_and_show_flag()` function.
 
-## Demystifying the `validate_conditions_and_show_flag()` Function
+### Demystifying the `validate_conditions_and_show_flag()` Function
 
 This method performs a few validations; if any condition fails, the flag logic won’t be triggered.
 
@@ -386,11 +391,11 @@ Next, it verifies the following:
 
 If all the above conditions are satisfied, it waits for 3 seconds (using a `while` loop) before starting to concatenate the flag by cherry-picking each letter from `meme_image_name`, `caption1`, etc., at specific positions. We don’t need to manually reverse each letter—since we have the JavaScript source code, we can use the browser’s `Dev Tools` to execute the `validate_conditions_and_show_flag()` function right away with the expected conditions and reveal the flag in an alert.
 
-## Triggering the Alert
+### Triggering the Alert
 
 Let’s update the `validate_conditions_and_show_flag()` function by setting the conditions to be satisfied, removing unnecessary checks and the delay loop. The function will look like this:
 
-```javascript
+```js
 function validate_conditions_and_show_flag() {
     const meme_image_name = Object.keys(meme_image_dict)[5]  
     const caption1 = meme_captions_array[14]
@@ -434,7 +439,7 @@ function validate_conditions_and_show_flag() {
 
 Toggle `Dev Tools` on in the browser (I’m using **Chrome** here) and paste this final script into the `Console` tab to reveal the flag:
 
-```javascript
+```js
 const meme_captions_array = [
     'When you find a buffer overflow in legacy code',
     'Reverse Engineer',
@@ -550,9 +555,10 @@ validate_conditions_and_show_flag()
 ```
 
 And with that, the flag is handed over to you!! 🎉
-[![Alert the flag](https://lh3.googleusercontent.com/pw/AP1GczMbw2IFxLAmj3LbjCFXByMhKsjvhloXgiq90S45QTy8QJuByo73RFDSIzSceqUb0Y48a2puY-vMuwdBR9drguvf0zaNNaoPHXW2BCQSTnjuCCRacC7zPQ6vz9nLSfavNNm86U9WydtC07bhvYua7tdF=w2820-h1612-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczMbw2IFxLAmj3LbjCFXByMhKsjvhloXgiq90S45QTy8QJuByo73RFDSIzSceqUb0Y48a2puY-vMuwdBR9drguvf0zaNNaoPHXW2BCQSTnjuCCRacC7zPQ6vz9nLSfavNNm86U9WydtC07bhvYua7tdF=w2820-h1612-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 3 - Alert the flag** <br/><br/>
+![Alert the flag](https://lh3.googleusercontent.com/pw/AP1GczMbw2IFxLAmj3LbjCFXByMhKsjvhloXgiq90S45QTy8QJuByo73RFDSIzSceqUb0Y48a2puY-vMuwdBR9drguvf0zaNNaoPHXW2BCQSTnjuCCRacC7zPQ6vz9nLSfavNNm86U9WydtC07bhvYua7tdF=w2820-h1612-s-no-gm?authuser=2)
+_**Figure: 3 - Alert the flag**_
 
-# Replay with Unmodified Source Code
+## Replay with Unmodified Source Code
 
 Some might say we took a shortcut to get the flag — fair enough! Let’s open `mememaker3000.html` in the browser and reproduce the steps manually to keep the critics silent:
 
@@ -562,13 +568,14 @@ Some might say we took a shortcut to get the flag — fair enough! Let’s open 
 - Enter `Malware` for the other girl’s caption.
 - And take a sip of coffee...
 
-[![Distracted Boyfriend](https://lh3.googleusercontent.com/pw/AP1GczPn3wfOfkbf2fBhKnD_PAtwd-DimBL71VmUs0LusUo6pC19R_OAGYticxHiKr0isevQNAUHlrGsbsYKQZG7vCz01nHXQM_qKag6jTa7uNMMemebS4AJpooZS-8BkXMLUeIMm02JSXjWLjzG8dhoEtwU=w2156-h1192-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczPn3wfOfkbf2fBhKnD_PAtwd-DimBL71VmUs0LusUo6pC19R_OAGYticxHiKr0isevQNAUHlrGsbsYKQZG7vCz01nHXQM_qKag6jTa7uNMMemebS4AJpooZS-8BkXMLUeIMm02JSXjWLjzG8dhoEtwU=w2156-h1192-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 4 - Distracted Boyfriend** <br/><br/>
+![Distracted Boyfriend](https://lh3.googleusercontent.com/pw/AP1GczPn3wfOfkbf2fBhKnD_PAtwd-DimBL71VmUs0LusUo6pC19R_OAGYticxHiKr0isevQNAUHlrGsbsYKQZG7vCz01nHXQM_qKag6jTa7uNMMemebS4AJpooZS-8BkXMLUeIMm02JSXjWLjzG8dhoEtwU=w2156-h1192-s-no-gm?authuser=2)
+_**Figure: 4 - Distracted Boyfriend**_
 
 
-# Conclusion
+## Conclusion
 
 This challenge felt a bit troublesome at first, but once we removed the obfuscation obstacle, it became a straightforward task to solve. Surprisingly, this felt easier than Challenge 2 — perhaps the author wanted to let us relax a bit before the next challenge. A storm is coming?
 
-# References
+## References
 - [deobfuscate.relative.im](https://deobfuscate.relative.im/)
 - [obfuscator.io](https://obfuscator.io/)

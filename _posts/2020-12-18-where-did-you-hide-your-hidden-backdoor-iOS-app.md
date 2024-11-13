@@ -1,10 +1,15 @@
 ---
 layout: post
 title: Reverse engineering and find out hidden backdoor in iOS app
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczNa0y6NgJy86Wa1LXMwBg_Ra5xru2mwcU7TfZEhSFESUoBuBkdmCzjg20-b3AOrXl8ePImfHFk9eZFKrULpwy2YupOUKGE__deMQydFJhTYBq0KKCASBIVWoJUnnQOmmVtv4Fmh0Mc4wb3HJOPQ-ZEe=w1058-h1004-s-no-gm?authuser=2
+    alt: Hidden backdoor
+tags: [ios]
 ---
 
 In this post, we will reverse an app using the StoreKit framework and bypass In-app purchases (IAP) features. This case's quite special as the app will force the user to purchase the app as a free trial before allowing to use. It will auto-renew the monthly price plan if you forget to cancel before the renewal date. There will be no option on the screen to opt-out for IAP.
-[![Hidden backdoor]({{ site.baseurl }}/images/20201218/app-bypass-popup.jpeg)]({{ site.baseurl }}/images/20201218/app-bypass-popup.jpeg){:target="_blank"} <br/>**Figure: Hidden backdoor** <br/><br/>
+![Hidden backdoor](https://lh3.googleusercontent.com/pw/AP1GczNOR3UTk1DvHPnlmzPWCb9qjmFANZQHSgYN20_prGeEBc4TktZR9MIyUWBvTVX0yj7ZwoXDfNLXwat6Xgogsk5m8RrGwQiYkKUsy9AMIOJx3dEd3a9JXJFfVa0SkgzWNVL1joK4Gl_cGgd_0a64TD1c=w640-h1102-s-no-gm?authuser=2)
+_**Figure: Hidden backdoor**_
 
 ## Disclaimer
 This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect an app name REDACTED. The figures during the post just for demonstrations, might not relevant to REDACTED app.
@@ -19,10 +24,12 @@ Below tools are used during this post:
 ## Overview
 Have you ever installed an IAP app that requires to purchase before using it? Even it provides a free trial option, you still need to purchase the trial first before handing on any app features, and it will auto-renew the monthly charge option (or yearly) after the free trial expires. I found REDACTED app has the same IAP behavior, which has more than hundres of thousands ratings in the App Store. When I launch REDACTED app for the first time, it shows the paywall immediately with the only option to purchase to use the rest of the app.
 
-[![Paywall]({{ site.baseurl }}/images/20201218/paywall.jpeg)]({{ site.baseurl }}/images/20201218/paywall.jpeg){:target="_blank"} <br/>**Figure 1: Paywall screen**<br/><br/>
+![Paywall]({{ site.baseurl }}/images/20201218/paywall.jpeg)
+_**Figure 1: Paywall screen**_
 
 Tap on **Continue** button will lead to the iOS built-in IAP popup:
-[![IAP popup]({{ site.baseurl }}/images/20201218/apple-purchase-popup.jpeg)]({{ site.baseurl }}/images/20201218/apple-purchase-popup.jpeg){:target="_blank"} <br/>**Figure 2: IAP popup**<br/><br/>
+![IAP popup]({{ site.baseurl }}/images/20201218/apple-purchase-popup.jpeg)
+_**Figure 2: IAP popup**_
 
 There is no skip option on the screen unless you make a purchase for a free trial to use the app, needless to mention you might forget to cancel the subscription if you do not like the app for some tries and it will cost you an extra dollar once auto-renewal is triggered. 
 
@@ -34,7 +41,7 @@ Configure **FLEXLoader** tweak to inject in to `REDACTED` app in `Settings` app 
 
 ### Findout suspicious methods
 Once I know the paywall view controller name, just load `REDACTED` app into `Hopper Disassembler` for static analysis and one method caught my eye:
-```assembly
+```nasm
 -[IntroSubscriptionWhiteBaselineViewController showHiddenFreeSubscription:]:
 adrp    x8, #0x100e91000
 ldr     x1, [x8, #0x1a0]; @selector(confirmHiddenAppBypassMode)
@@ -44,7 +51,7 @@ b       imp___stubs__objc_msgSend; objc_msgSend
 Base on the method name and method body it's easy to tell that once this one is triggered, it will invoke `confirmHiddenAppBypassMode` method, and again thanks to the meaningful method name it might do something relates to bypass the app. Let dive into `confirmHiddenAppBypassMode` by double click on it.
 
 ### Please insert app bypass password to continue
-```assembly
+```c
 /* @class SubscriptionBaseViewController */
 -(void)confirmHiddenAppBypassMode {
     r0 = [UIAlertController alertControllerWithTitle:@"App Bypass" message:@"App bypass is for Apple reviewers and press.\n\nPlease insert app bypass password to continue." preferredStyle:0x1];
@@ -64,7 +71,7 @@ It turns out that `confirmHiddenAppBypassMode` belongs to `SubscriptionBaseViewC
 
 ### Where is the PASSWORD?
 Let toggle to `ASM mode` to see where is the handler closure of **OK** button
-```assembly
+```nasm
 ldr     x1, [x8, #0xf8] ; "addTextFieldWithConfigurationHandler:",@selector(addTextFieldWithConfigurationHandler:)
 adrp    x2, #0x100cb8000 ; 0x100cb8ed8@PAGE
 add     x2, x2, #0xed8 ; 0x100cb8ed8@PAGEOFF, 0x100cb8ed8
@@ -82,7 +89,7 @@ adr     x8, #0x10015ba28; THIS IS THE ADDRESS OF HANDLER CLOSURE
 
 For closure handler, you can find out above as a typical stack setup where it will load handler address `#0x10015ba28` into register `x8`. Just double click on that address it will lead you to the real implementation.
 
-```assembly
+```c
 int sub_10015ba28(int arg0) {    
     r19 = arg0;
     r0 = *(arg0 + 0x20);
@@ -105,7 +112,7 @@ int sub_10015ba28(int arg0) {
 
 Do you see what is happening here? It gets text value from alert textfield, converts to lowercase, and compare with HARDCODING value `"siri"`. Once it matches, `presentAppBypassSelector` method will be triggered otherwise showing `"Incorrect Password"` alert. So if you enter `siri` into the alert textfield and tap on **OK** button, `presentAppBypassSelector` will be triggered.
 
-```assembly
+```c
 /* @class SubscriptionBaseViewController */
 -(void)presentAppBypassSelector {
     r20 = [[self analyticsService] retain];
@@ -127,7 +134,7 @@ Do you see what is happening here? It gets text value from alert textfield, conv
 
 As you can see `presentAppBypassSelector` method will do some analytics service and showing another alert with 2 options `ORIGINAL` and `DEMO MODE`. Trying to check what will happen for these 2 options, the former will trigger `becomeByPassUser` method while the latter will trigger `confirmDemoMode`.
 
-```assembly
+```c
 /* @class SubscriptionBaseViewController */
 -(void)performBypassOperations {
     ...
@@ -138,7 +145,7 @@ As you can see `presentAppBypassSelector` method will do some analytics service 
 }
 ```
 
-```assembly
+```c
 /* @class SubscriptionBaseViewController */
 -(void)confirmDemoMode {
     r0 = [UIAlertController alertControllerWithTitle:@"Demo" message:@"Demo mode is for Apple reviewers and press.\n\nPlease insert demo mode password to continue." preferredStyle:0x1];    
@@ -155,7 +162,7 @@ As you can see `presentAppBypassSelector` method will do some analytics service 
 
 Option `ORIGINAL` will treat you as a special bypass user, I think this is a means for internal testing with ease. `DEMO MODE` supposed to be used by the Apple review team which requires another password to key-in, in short, it will compare input password with hardcoded string `"demo"` to proceed with setup steps for demo purpose.
 
-```assembly
+```c
 int sub_10015bcfc(int arg0) {    
     r0 = *(arg0 + 0x20);
     r0 = [r0 textFields];
@@ -183,7 +190,7 @@ At this stage, we are quite clear there is a hidden backdoor in the app, but the
 ### How end-user can trigger this backdoor in app?
 It's fairly easy!!! We found suspicious method above steps `IntroSubscriptionWhiteBaselineViewController showHiddenFreeSubscription:]:`, in `Hopper Disassembler` you can right click to method name and select **References to selector showHiddenFreeSubscription:** it will navigate to this instruction `ldr  x3, [x8, #0x150] ; "showHiddenFreeSubscription:",@selector(showHiddenFreeSubscription:)` inside of `IntroSubscriptionWhiteBaselineViewController.viewDidLoad()` method.
 
-```assembly
+```nasm
 ...
 ldr		x0, [x8, #0xdb0] ; objc_cls_ref_UILongPressGestureRecognizer
 bl		imp___stubs__objc_alloc ; objc_alloc
@@ -226,7 +233,7 @@ mov		x0, x20
 
 This block is initializing `UILongPressGestureRecognizer` instance with action is `IntroSubscriptionWhiteBaselineViewController showHiddenFreeSubscription:]:` with minimum press duration is 2 seconds to activate. To know where it is added, you can trace back or toggle into pseudo-code mode as below.
 
-```assembly
+```c
 ...
 r0 = objc_alloc();
 r19 = [r0 initWithTarget:r20 action:@selector(showHiddenFreeSubscription:)];
@@ -239,20 +246,23 @@ r0 = objc_msgSend(r20, @selector(titleLabel));
 As you can see it is added into `titleLabel`, in the `IntroSubscriptionWhiteBaselineViewController` screen it will be **START 3 DAY TRIAL** label. You even can double confirm by attach **LLDB** debugger into running process and set breakpoint on this instruction `ldr		x1, [x8, #0x258] ; "addGestureRecognizer:",@selector(addGestureRecognizer:)` to examine value of register `x0`, which will be the `titleLabel` in this case.
 
 Now it's time to confirm all of the above static analysis in the running app.
-[![Tap and hold START 3 DAY TRIAL for 2 seconds]({{ site.baseurl }}/images/20201218/app-bypass-popup.jpeg)]({{ site.baseurl }}/images/20201218/app-bypass-popup.jpeg){:target="_blank"} <br/>**Figure 3: Tap and hold START 3 DAY TRIAL for 2 seconds**<br/><br/>
+![Tap and hold START 3 DAY TRIAL for 2 seconds]({{ site.baseurl }}/images/20201218/app-bypass-popup.jpeg)
+_**Figure 3: Tap and hold START 3 DAY TRIAL for 2 seconds**_
 
 Enter `siri` text and tap on **OK** button it will show another app mode selection popup.
-[![Select App Mode popup]({{ site.baseurl }}/images/20201218/bypass-app-mode-popup.jpeg)]({{ site.baseurl }}/images/20201218/bypass-app-mode-popup.jpeg){:target="_blank"} <br/>**Figure 4: Select App Mode popup**<br/><br/>
+![Select App Mode popup]({{ site.baseurl }}/images/20201218/bypass-app-mode-popup.jpeg)
+_**Figure 4: Select App Mode popup**_
 
 Now you can select `ORIGINAL` mode to become a bypass user and enjoy all features for free or select `DEMO MODE` option to experience pre-setup feature for demo purpose only. Below is the popup when you select `DEMO MODE` option.
 
-[![Demo bypass popup]({{ site.baseurl }}/images/20201218/demo-bypass-mode-popup.jpeg)]({{ site.baseurl }}/images/20201218/demo-bypass-mode-popup.jpeg){:target="_blank"} <br/>**Figure 5: Demo bypass popup**<br/><br/>
+![Demo bypass popup]({{ site.baseurl }}/images/20201218/demo-bypass-mode-popup.jpeg)
+_**Figure 5: Demo bypass popup**_
 
 Congrats!!! The hidden backdoor is revealed and opened!!
 
 ### What else can we find?
 By searching `UILongPressGestureRecognizer` in `Labels` tab in `Hopper Disasembler`, I can see it's used in a lot of places: 
-```assembly
+```nasm
 _OBJC_CLASS_$_UILongPressGestureRecognizer  
     ; DATA XREF=-[IntroSplashViewController viewDidLoad]+2820, 
     -[ReorderViewController viewDidLoad]+684, 
@@ -268,12 +278,13 @@ _OBJC_CLASS_$_UILongPressGestureRecognizer
 ```
 
 Follow one of the above references I can toggle another interesting app variant debug popup.
-[![App variant debug popup]({{ site.baseurl }}/images/20201218/app-variant-debug-popup.jpeg)]({{ site.baseurl }}/images/20201218/app-variant-debug-popup.jpeg){:target="_blank"} <br/>**Figure 6: App variant debug popup**<br/><br/>
+![App variant debug popup]({{ site.baseurl }}/images/20201218/app-variant-debug-popup.jpeg)
+_**Figure 6: App variant debug popup**_
 
 ## Final thoughts
 - Hardcoding password or secret key in-app binary should not be an option, we better store it on the server-side and do the validation there to protect premium feature, REDACTED app has hundreds of thousands of rating and users, so it should consider it seriously.
 - For static analysis automation, you and add this small script to quickly scan app binary:
-```assembly
+```bash
 $ nm REDACTED | grep -i UILongPressGestureRecognizer
     U _OBJC_CLASS_$_UILongPressGestureRecognizer
     U _OBJC_METACLASS_$_UILongPressGestureRecognizer

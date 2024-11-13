@@ -1,10 +1,15 @@
 ---
 layout: post
 title: Bypass In-app purchases of react native iOS app
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczPMulibL9hCo6HhkyglFZrZDkxsHX53zWXL4Xy4oc8UEbWl_Uz6k5NhID8SRduPuGtX9r9xCc0Jvdwj19xdWfa0yGLvheru4ruWkXI7m4u7OHAH__uCnGKa4LNquE1j4D1SXR2LrjO0U2Ml_f1hZDmG=w1038-h730-s-no-gm?authuser=2
+    alt: Purchase screen
+tags: [ios, react-native, iap, bypass]
 ---
 
 Today we will reverse engineering a react native iOS app and bypass in-app purchase to use locked features. Below is an example of purchase screen whenever tap on premium content.
-[![purchase screen]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png)]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png){:target="_blank"} <br/>**Figure 1: Sample In-app purchases locked contents**<br/><br/>
+![purchase screen]({{ site.baseurl }}/images/ugp-ios/purchase-screen.png)
+_**Figure 1: Sample In-app purchases locked contents**_
 
 ## Disclaimer
 This post is for educational purposes only. How you use this information is your responsibility. I will not be held accountable for any illegal activities, so please use it at your discretion and contact the app's author if you find issues. We will inspect an app has In-app purchases feature, name REDACTED. The figures during the post just for demonstrations, might not relevant to REDACTED app.
@@ -31,30 +36,35 @@ With the help of [Frida iOS Dump](https://github.com/AloneMonkey/frida-ios-dump)
 - ...
 
 With simple search command `grep -iRl "other great features with Pro access" ./Payload/` luckily we found this text is contained in `main.jsbundle` file.
-[![Find files containing specific text]({{ site.baseurl }}/images/ugp-ios/search-text-in-folder.png)]({{ site.baseurl }}/images/ugp-ios/search-text-in-folder.png){:target="_blank"}<br/>**Figure 2: Find files containing specific text**<br/><br/>
+![Find files containing specific text]({{ site.baseurl }}/images/ugp-ios/search-text-in-folder.png)
+_**Figure 2: Find files containing specific text**_
 
 
 ### React Native
 If you are a mobile app developer, you can confirm that this app was developed (fully/partially) using [React Native framework](https://reactnative.dev/). React Native is an open-source mobile application framework created by Facebook. It is used to develop applications for iOS, Android, Web by enabling developers to use React along with native platform capabilities. And the main logic of the app remains inside main.jsbundle which used to be minified javascript file.
 
-[![main.jsbundle]({{ site.baseurl }}/images/ugp-ios/main-jsbundle.png)]({{ site.baseurl }}/images/ugp-ios/main-jsbundle.png){:target="_blank"}<br/>**Figure 3: main.jsbundle content**<br/><br/>
+![main.jsbundle]({{ site.baseurl }}/images/ugp-ios/main-jsbundle.png)
+_**Figure 3: main.jsbundle content**_
 
 This file size is around 5MB, it's huge and looks like the whole application logic is inside this single file, but scare not!! [Beautifier](https://beautifier.io/) comes to rescue ^_^
 
 ### Reverse main.jsbundle
 Copy `main.jsbundle` content and paste on [Beautifier](https://beautifier.io/) site we will get formatted one. It won't decrypt the file to original source code but it formats syntax for readability, which we can use to reverse the app logic.
 
-[![formatted main.jsbundle]({{ site.baseurl }}/images/ugp-ios/formatted-main-jsbundle.png)]({{ site.baseurl }}/images/ugp-ios/formatted-main-jsbundle.png){:target="_blank"}<br/>**Figure 4: Formatted main.jsbundle**<br/><br/>
+![formatted main.jsbundle]({{ site.baseurl }}/images/ugp-ios/formatted-main-jsbundle.png)
+_**Figure 4: Formatted main.jsbundle**_
 
 Let's open original main.jsbundle and paste formatted content into any text editor, in my case I'm using *Sublime* and search for the text _"other great features with Pro access"_
 
 Now searching for something like _"purchase"_, we will see that we can find some results, one of them likes below is worth to pay attention and dive deep.
-[![onPurchaseFinish]({{ site.baseurl }}/images/ugp-ios/on-purchase-finish-callback.png)]({{ site.baseurl }}/images/ugp-ios/on-purchase-finish-callback.png){:target="_blank"}<br/>**Figure 5: Purchase search leads us to onPurchaseFinish callback**<br/><br/>
+![onPurchaseFinish]({{ site.baseurl }}/images/ugp-ios/on-purchase-finish-callback.png)
+_**Figure 5: Purchase search leads us to onPurchaseFinish callback**_
 
 Do you see what I see? `hasProAccount` rings the bell? By searching _"purchase"_ we found a new flag `hasProAccount` which is a boolean type and might be used to decide if the user has a free account or pro account. Let's note down this variable and searching all of its references to see how it's used.
 But before that, let's try to understand what this method is doing. It will be hard to read minified javascript code as it uses comma as the end of statements and some if/else syntax not clearly to observe.
 To make our life easier, I found this [JS Nice](http://jsnice.org/) tools helpful. It's statistical rename, type inference and deobfuscation, perfectly fit for our case so let give it a try
-[![js nice]({{ site.baseurl }}/images/ugp-ios/jsnice-onfeatureaction.png)]({{ site.baseurl }}/images/ugp-ios/jsnice-onfeatureaction.png){:target="_blank"}<br/>**Figure 6: JS Nice comes to rescue**<br/><br/>
+![js nice]({{ site.baseurl }}/images/ugp-ios/jsnice-onfeatureaction.png)
+_**Figure 6: JS Nice comes to rescue**_
 
 The deobfuscated result is awesome. We can see there is a bunch of if-else logic and it's much easier to read and understand the function now.
 This method will be triggered when we tap on any features in Tools tabs (CHROMATIC_TUNER_KEY, METRONOME_KEY, BRAIN_TUNER_KEY, CHORD_LIBRARY_KEY). It will do nothing if `hasProAccount` is `true`. But if `hasProAccount` is `false`, tap on any above features will do 2 things:
@@ -63,8 +73,8 @@ This method will be triggered when we tap on any features in Tools tabs (CHROMAT
 
 If `hasProAccount` is `false` and tab in features that do not belong to the above list, it will trigger that event as normal.
 So from here we can make sure `hasProAccount` will be the key to unlock In-app purchases. Let's search `hasProAccount =` to find out where this value is set, the results are only 3 places.
-[![hasProAccount =]({{ site.baseurl }}/images/ugp-ios/search-has-pro-account-set.png)]({{ site.baseurl }}/images/ugp-ios/search-has-pro-account-set.png){:target="_blank"}<br/>**Figure 7: Search where hasProAccount is set**<br/><br/>
-
+![hasProAccount =]({{ site.baseurl }}/images/ugp-ios/search-has-pro-account-set.png)
+_**Figure 7: Search where hasProAccount is set**_
 
 ### Patch the app
 Now the job is trivial by replacing `hasProAccount = true` for all 3 places:
@@ -79,4 +89,4 @@ Relaunch the app, BOOM!!! No more in-app purchases screen, even ads is gone too,
 ## Final thought
 - The client-side should show a purchase screen first instead of a content screen followed by. This would hide the feeling that premium content already been on the client but blocked by another purchase screen, try to get rid of purchase screen means can use the app.
 - React native is fast to develop applications for cross-platforms, but as we can see client-side logic is in plain text and with some steps required we can reverse and unlock client-side logic.
-- [File Integrity Checks](https://github.com/OWASP/owasp-mstg/blob/master/Document/0x06j-Testing-Resiliency-Against-Reverse-Engineering.md#file-integrity-checks-mstg-resilience-3-and-mstg-resilience-11) can be used to mitigate main.jsbundle modification
+- [File Integrity Checks](https://github.com/OWASP/owasp-mstg/blob/master/Document/0x06j-Testing-Resiliency-Against-Reverse-Engineering.md#file-integrity-checks-mstg-resilience-3-and-mstg-resilience-11) can be used to mitigate `main.jsbundle` modification

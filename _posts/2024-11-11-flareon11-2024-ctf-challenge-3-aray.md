@@ -1,20 +1,24 @@
 ---
 layout: post
 title: "Cracking the Flare-On 11 CTF 2024: Challenge 3 - aray"
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczP0Zp7rfVdUh3LtetCVUK1JANiHG6tMP1IZJEq45yxABL23tTNMMWBJp5nK2wbZmb6PrmOhGjozDMpIWFEN-YFwNqQm4aNyjRSzFeXvnr84hq36rXextOfjYgWsek5tMpReUMkHUYLZ7AcjGQv0D7D-=w2284-h1354-s-no-gm?authuser=2
+    alt: Challenge 3 - aray
+tags: [flareon, flareon11, flareon-2024, ctf, yara]
+categories: [CTF, Flareon 2024]
 ---
 Given a `.yara` file with hundreds of conditions, we need to dive deep to recover each character and reconstruct the hidden Yara rules. This is indeed a pleasant challenge—or am I wrong?
-[![Challenge 3 - aray](https://lh3.googleusercontent.com/pw/AP1GczP0Zp7rfVdUh3LtetCVUK1JANiHG6tMP1IZJEq45yxABL23tTNMMWBJp5nK2wbZmb6PrmOhGjozDMpIWFEN-YFwNqQm4aNyjRSzFeXvnr84hq36rXextOfjYgWsek5tMpReUMkHUYLZ7AcjGQv0D7D-=w2284-h1354-s-no-gm?authuser=2)](https://lh3.googleusercontent.com/pw/AP1GczP0Zp7rfVdUh3LtetCVUK1JANiHG6tMP1IZJEq45yxABL23tTNMMWBJp5nK2wbZmb6PrmOhGjozDMpIWFEN-YFwNqQm4aNyjRSzFeXvnr84hq36rXextOfjYgWsek5tMpReUMkHUYLZ7AcjGQv0D7D-=w2284-h1354-s-no-gm?authuser=2){:target="_blank"} <br/>**Figure: 1 - aray** <br/><br/>
 
-# Challenge description
+## Challenge description
 >3 - aray
 >
 >And now for something completely different. I'm pretty sure you know how to write Yara rules, but can you reverse them?
 
-# Sanitize the Rules
+## Sanitize the Rules
 Given an `array.yara` file with tons of rules, don’t feel dizzy at first glance. We need to sanitize it first and then gradually solve the puzzle. We can observe that all conditions in the file are concatenated with the **`and`** keyword, so we can use this to replace them with new line characters and sort conditions alphabetically to group related conditions together. Use the command `sort -n filename > replace_and_sorted_conditions.txt`. Here are the sanitized rules—`548 conditions` to be exact! ^_^
 
 
-```yara
+```
 filesize == 85 
 filesize ^ uint8(0) != 16 
 filesize ^ uint8(0) != 41 
@@ -564,12 +568,13 @@ uint8(9) & 128 == 0
 uint8(9) < 151 
 uint8(9) > 23
 ```
+{: file='replace_and_sorted_conditions.txt'}
 
-# Understand the Condition Format
+## Understand the Condition Format
 
 First of all, the file size must be 85 bytes (`filesize == 85`). Each byte index (zero-based) is enclosed in parentheses. For example, `uint8(10) > 9` is a condition that checks if the byte at index `10` is greater than `9`, where `uint32(10)` refers to 4 bytes starting from byte index `10`. You might wonder whether it’s little-endian or big-endian? Good question! By default, `intXX` functions are **little-endian**.
 
-# File Content Table
+## File Content Table
 
 Let’s create a template to indicate the byte indices of the file and the values they should hold. We will fill in the values one by one based on the conditions.
 
@@ -599,11 +604,11 @@ Let’s create a template to indicate the byte indices of the file and the value
 | Value |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
 
 
-# Which Byte Indices Should Be a Good Start?
+## Which Byte Indices Should Be a Good Start?
 
 Let’s scan through the conditions from top to bottom and pick out conditions on byte indices that can be deduced to concrete values. We can identify a few:
 
-```yara
+```
 uint32(10) + 383041523 == 2448764514 
 uint32(17) - 323157430 == 1412131772 
 uint32(22) ^ 372102464 == 1879700858 
@@ -619,7 +624,7 @@ uint32(70) + 349203301 == 2034162376
 uint32(80) - 473886976 == 69677856 
 ```
 
-## uint32(index)
+### uint32(index)
 
 Let’s take this condition as an example: `uint32(10) + 383041523 == 2448764514`
 
@@ -627,7 +632,7 @@ This is an easy start, as we can deduce that `uint32(10) = 2448764514 - 38304152
 
 Notice that the result represents 4 bytes starting from byte index `10` (the 11th byte). Remember, this is in little-endian format, so we get our first 4 bytes' value as follows:
 
-```C
+```
 byte_arr[10] = 0x6F = 'o'
 byte_arr[11] = 0x6E = 'n'
 byte_arr[12] = 0x20 = ' '
@@ -636,7 +641,7 @@ byte_arr[13] = 0x7B = '{'
 
 Let’s take another condition: `uint32(3) ^ 298697263 == 2108416586`. From this, we get `uint32(3) = 2108416586 ^ 298697263 = 1818632293 = 0x6C662065`.
 
-```C
+```
 byte_arr[3] = 0x65 = 'e'
 byte_arr[4] = 0x20 = ' '
 byte_arr[5] = 0x66 = 'f'
@@ -645,7 +650,7 @@ byte_arr[6] = 0x6C = 'l'
 
 Applying the same computation to other `uint32(x)` functions, we identified a few byte values that we can now fill into the table:
 
-```yara
+```
 uint32(10) + 383041523 == 2448764514    => uint32(10) = 0x7B206E6F = "{ no"
 uint32(17) - 323157430 == 1412131772    => uint32(17) = 0x676E6972 = "gnir"
 uint32(22) ^ 372102464 == 1879700858    => uint32(22) = 0x6624203A = "f$ :"
@@ -686,7 +691,7 @@ uint32(80) - 473886976 == 69677856      => uint32(80) = 0x20662420 = " f$ "
 |-------|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
 | Value |' ' |'$' |'f' |' ' |    |    |    |    |    |    |    |    |    |    |    |    |
 
-# Predict the Missing Bytes
+## Predict the Missing Bytes
 
 As we can see, part of the flag is starting to appear. We can observe an `"@"` followed by 3 bytes, then `"re-o"`, another 3 bytes, and finally `"om"`. It’s reasonable to guess that this pattern corresponds to `"@flare-on.com"`. Let’s update the table accordingly.
 
@@ -716,7 +721,7 @@ As we can see, part of the flag is starting to appear. We can observe an `"@"` f
 
 With this updated table, we can better identify where the flag starts and ends. It begins at byte index `30` and ends at byte index `67`. Our flag appears to be enclosed in double quotes, meaning we can focus solely on the missing bytes within the range `[30:67]`. The rest of the bytes can likely be ignored, as they aren’t part of the flag—unless, of course, you’re curious enough to fully recover the entire byte content! :D
 
-# Fill in the Holes
+## Fill in the Holes
 
 Here are the remaining byte indices within the flag range that we haven’t discovered yet: `32, 33, 34, 35, 36, 45, 50, 51`. These 8 missing bytes are significantly fewer compared to the hundreds of conditions we haven’t touched, so this looks promising.
 
@@ -724,11 +729,11 @@ If you’re a fan of Pokémon, we might be on the same wavelength: think of this
 
 It’s tempting to start with these indices in order, but there’s a better strategy: let’s pick the indices adjacent to known bytes, as we can make educated guesses based on surrounding characters. Let’s start with byte index `50`.
 
-## Byte Index `50` - MD5 Checksum
+### Byte Index `50` - MD5 Checksum
 
 Using the `grep` command with `"(50"` reveals 7 conditions applied to this byte index.
 
-```bashscript
+```bash
 $ grep "(50" replaced_and_sorted_conditions.txt
 filesize ^ uint8(50) != 219
 filesize ^ uint8(50) != 86
@@ -740,7 +745,7 @@ uint8(50) > 19
 ```
 
 Let tackle them one by one:
-```C
+```
 filesize ^ uint8(50) != 219 
     => uint8(50) != filesize ^ 219 
     => uint8(50) != 85 ^ 219 
@@ -749,29 +754,29 @@ filesize ^ uint8(50) != 219
 
 ```
 
-```C
+```
 filesize ^ uint8(50) != 86
     => uint8(50) != 85 ^ 86
     => uint8(50) != 3
     => Similarly, this condition is always true.
 ```
 
-```C
+```
 uint8(50) % 11 < 11
     => This condition is always true for any bytes in the range `0x20` to `0x7E`, as the remainder when dividing by 11 will always fall between 0 and 10.
 ```
 
-```C
+```
 uint8(50) & 128 == 0
     => This means the highest bit of this byte (bit 7) must be 0, indicating that the byte is less than 128. This condition is always true.
 ```
 
-```C
+```
 uint8(50) < 138
     => This condition is always true.
 ```
 
-```C
+```
 uint8(50) > 19 
     => This condition is always true.
 ```
@@ -779,7 +784,7 @@ uint8(50) > 19
 Basically, all the above conditions are useless in narrowing down the possible range for byte index `50`. However, we overlooked one remaining condition: `hash.md5(50, 2) == "657dae0913ee12be6fb2a6f687aae1c7"`. This `hash.md5(offset, length)` function calculates the MD5 hash of a substring of the flag. In this case, it takes the bytes starting at offset 50 and reads 2 bytes, meaning bytes `50` and `51`. 
 
 With this condition, we can consider brute-forcing to find a pair of bytes that produce the same hash. We can quickly write a Python script to brute-force this pair:
-```bashscript
+```bash
 $ python3
 Python 3.13.0 (main, Oct  7 2024, 05:02:14) [Clang 15.0.0 (clang-1500.3.9.4)] on darwin
 Type "help", "copyright", "credits" or "license" for more information.
@@ -826,7 +831,7 @@ We use two loops that iterate over the ASCII range of printable characters, hash
 | Value |' ' |'$' |'f' |' ' |    |    |    |    |    |    |    |    |    |    |    |    |
 
 
-## Byte Index `32` - MD5 Checksum
+### Byte Index `32` - MD5 Checksum
 
 Repeating the same process as in the previous step, we find that an MD5 hash is also applied to bytes `32-33`: `hash.md5(32, 2) == "738a656e8e8ec272ca17cd51e12f558b"`.
 
@@ -858,7 +863,7 @@ Running the Python brute-force helper with this new digest `brute_force_md5("738
 
 The flag is almost revealed: `1Rul???ayK33p$M?lw4r3Aw4y@flare-on.com`. We have only 4 characters remaining (actually just 2, as we can guess the flag might be `1 rule something keeps malware away`).
 
-## Byte Index `34` - CRC32 Checksum
+### Byte Index `34` - CRC32 Checksum
 
 Repeating the same steps as before, we find that this byte is involved in a CRC32 checksum function: `hash.crc32(34, 2) == 0x5888fc1b`, which involves byte indices `34` and `35`.
 ```bashscript
@@ -907,15 +912,15 @@ We found the byte values are `"eA"`. Let’s update the table accordingly.
 |-------|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
 | Value |' ' |'$' |'f' |' ' |    |    |    |    |    |    |    |    |    |    |    |    |
 
-## Byte Index `36`
+### Byte Index `36`
 
 By searching `(36` in the file, we found this condition: `uint8(36) + 4 == 72`, which directly identifies the value `uint8(36) = 68 ('D')`. This updates our flag to: `1RuleADayK33p$M?lw4r3Aw4y@flare-on.com`. At this point, we can guess the last missing byte could be `'a'`, `'A'`, `'4'`, or `'@'`. It’s tempting to make a final guess, but since we’re so close, let’s try to identify the last byte.
 
-## Byte Index `45` - The Very Last Piece
+### Byte Index `45` - The Very Last Piece
 
 Among multiple noisy conditions (which are always true), we found `uint8(45) ^ 9 == 104`, which deduces the value as `uint8(45) = 104 ^ 9 = 97 ('a')`.
 
-## THE FINAL FLAG
+### THE FINAL FLAG
 | Index | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | 10 | 11 | 12 | 13 | 14 | 15 |
 |-------|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
 | Value |    |    |    |'e' |' ' |'f' |'l' |    |    |    |'o' |'n' |' ' |'{' |    |    |
@@ -942,7 +947,7 @@ Among multiple noisy conditions (which are always true), we found `uint8(45) ^ 9
 
 We have completely reveal the FLLLLLAAAAAGGGGG: `1RuleADayK33p$Malw4r3Aw4y@flare-on.com`
 
-## The Final Pokédex
+### The Final Pokédex
 
 Let’s continue filling in the table with the remaining conditions to complete the analysis.
 
@@ -973,7 +978,7 @@ Let’s continue filling in the table with the remaining conditions to complete 
 To make it simpler, here is the final string that matches all conditions: `rule flareon { strings: $f = "1RuleADayK33p$Malw4r3Aw4y@flare-on.com" condition: $f }`
 
 If we hash this final string using MD5, we get the digest `b7dc94ca98aa58dabb5404541c812db2`, which matches the description and condition in the file: `hash.md5(0, filesize) == "b7dc94ca98aa58dabb5404541c812db2"`.
-```python
+```bash
 $ python3
 Python 3.13.0 (main, Oct  7 2024, 05:02:14) [Clang 15.0.0 (clang-1500.3.9.4)] on darwin
 Type "help", "copyright", "credits" or "license" for more information.
@@ -984,6 +989,6 @@ encode('utf-8')).hexdigest()
 b7dc94ca98aa58dabb5404541c812db2
 ```
 
-# Conclusion
+## Conclusion
 
 Given the `aray.yara` file with tons of rules, we observed a pattern: only a few rules were helpful, while the others served as noise to distract from reversing attempts (which explains why only 85 bytes required 500+ rules). Ultimately, we recovered the Yara rule containing the flag, making for a very satisfying puzzle to solve! This was a new type of challenge, and I loved solving it during the competition.
