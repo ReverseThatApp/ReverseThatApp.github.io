@@ -5,7 +5,7 @@ _site
 .bundle
 .sass-cache
 Gemfile
-Gemfile.lock
+#Gemfile.lock
 node_modules
 package.json
 script
