@@ -172,6 +172,9 @@ collections:
   tabs:
     output: true
     sort_by: order
+  disclosures:
+    output: true
+    permalink: /disclosures/:name/
 
 defaults:
   - scope:

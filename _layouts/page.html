@@ -9,7 +9,8 @@ layout: default
     {% assign tab_key = page.title | downcase %}
     {% assign title = site.data.locales[lang].tabs[tab_key] | default: page.title %}
     <h1 class="dynamic-title">
-      {{ title }}
+      <!-- modified here a bit to support displaying custom page_title if provided -->
+      {{ page.page_title | default: title }}
     </h1>
     <div class="content">
       {{ content }}

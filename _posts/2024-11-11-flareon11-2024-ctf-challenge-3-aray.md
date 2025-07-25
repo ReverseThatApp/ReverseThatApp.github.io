@@ -13,6 +13,7 @@ Given a `.yara` file with hundreds of conditions, we need to dive deep to recove
 >3 - aray
 >
 >And now for something completely different. I'm pretty sure you know how to write Yara rules, but can you reverse them?
+{: .prompt-info}
 
 ## Sanitize the Rules
 Given an `array.yara` file with tons of rules, don’t feel dizzy at first glance. We need to sanitize it first and then gradually solve the puzzle. We can observe that all conditions in the file are concatenated with the **`and`** keyword, so we can use this to replace them with new line characters and sort conditions alphabetically to group related conditions together. Use the command `sort -n filename > replace_and_sorted_conditions.txt`. Here are the sanitized rules—`548 conditions` to be exact! ^_^

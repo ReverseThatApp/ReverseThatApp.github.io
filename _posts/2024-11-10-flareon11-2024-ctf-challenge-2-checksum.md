@@ -14,6 +14,7 @@ We recently came across a silly executable that appears benign. It just asks us 
 >2 - checksum
 >
 >We recently came across a silly executable that appears benign. It just asks us to do some math... From the strings found in the sample, we suspect there are more to the sample than what we are seeing. Please investigate and let us know what you find!
+{: .prompt-info}
 
 ## Run the Challenge
 Run `checksum.exe`, which will display a console application and prompt us with a series of math questions. If the answers are correct, it will repeat the questions a few times, followed by a **"Checksum"** prompt for input. If any math answers or the checksum input are incorrect, the application terminates without a trace.

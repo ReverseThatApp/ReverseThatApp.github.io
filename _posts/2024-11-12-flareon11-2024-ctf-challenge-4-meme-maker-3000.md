@@ -14,6 +14,7 @@ Given a deceptively "simple" `mememaker3000.html` file weighing in at `2.5MB` an
 > 4 - Meme Maker 3000
 >
 >You've made it very far, I'm proud of you even if noone else is. You've earned yourself a break with some nice HTML and JavaScript before we get into challenges that may require you to be very good at computers.
+{: .prompt-info}
 
 ## The Main `mememaker3000.html` File
 Even though this is an `.html` file, it barely contains any HTML—most of it is a dense block of JavaScript logic. The user interface is as minimalist as it gets, with just a dropdown list to generate funny images and texts. It’s almost as if HTML was just invited to the party to watch JavaScript do all the heavy lifting!

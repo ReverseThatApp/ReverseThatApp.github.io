@@ -10,15 +10,16 @@ categories: [CTF, Flareon 2024]
 
 Dive into my journey through the Flare-On 11 CTF Challenge! I tackled all 10 challenges this year, and in this series, I’ll break down my thought process, strategies, and discoveries. Whether you’re a beginner or an experienced CTF enthusiast, expect plenty of insights and detailed explanations to guide you through each step!
 
-## Overview
-The Flare-On Challenge is the [FLARE team's](https://cloud.google.com/security/mandiant-services) annual Capture-the-Flag (CTF) contest. It is a single-player series of Reverse Engineering puzzles that runs for 6 weeks every fall. [#flareon11](flare-on11.ctfd.io) is launching Sept. 27th 2024 at 8pm EST.
-
-This is the very first challenge and here is the description from the page.
+## Challenge description
 > 1 - frog
 >
 >Welcome to Flare-On 11! Download this 7zip package, unzip it with the password 'flare', and read the README.txt file for launching instructions. It is written in PyGame so it may be runnable under many architectures, but also includes a pyinstaller created EXE file for easy execution on Windows.
 >
 >Your mission is get the frog to the \"11\" statue, and the game will display the flag. Enter the flag on this page to advance to the next stage. All flags in this event are formatted as email addresses ending with the @flare-on.com domain.
+{: .prompt-info}
+
+## Overview
+The Flare-On Challenge is the [FLARE team's](https://cloud.google.com/security/mandiant-services) annual Capture-the-Flag (CTF) contest. It is a single-player series of Reverse Engineering puzzles that runs for 6 weeks every fall. [#flareon11](flare-on11.ctfd.io) is launching Sept. 27th 2024 at 8pm EST.
 
 Download and unzip the file with password `flare` we can see a few files that are good to start
 
