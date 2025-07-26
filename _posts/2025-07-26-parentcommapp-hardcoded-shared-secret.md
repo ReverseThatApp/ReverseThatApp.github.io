@@ -4,7 +4,7 @@ layout: post
 title: "[CVE REQUESTED] Broken JWT Authentication – Hardcoded Shared Secret in ParentCommApp (iOS))"
 date: 2025-07-26
 cve: "Reported"
-status: "Fixing"
+status: "Fixed"
 categories: [Disclosure]
 tags: [cve-requested, CVE, jwt, broken-auth, ednovation, parentcommapp, vulnerability, ios, api]
 permalink: /disclosures/parentcommapp-broken-jwt-hardcoded-shared-secret/

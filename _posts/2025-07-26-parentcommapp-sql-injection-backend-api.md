@@ -4,7 +4,7 @@ layout: post
 title: "[CVE REQUESTED] ParentCommApp SQL Injection Backend API"
 date: 2025-07-26
 cve: "Reported"
-status: "Fixing"
+status: "Fixed"
 categories: [Disclosure]
 tags: [cve-requested, CVE, sql-injection, pii-exposure, ednovation, parentcommapp, vulnerability, ios, api]
 permalink: /disclosures/parentcommapp-sql-injection-backend-api/
