@@ -22,7 +22,7 @@ This issue was discovered while testing the ParentCommApp on iOS, where traffic 
 
 ## Affected Product
 
-- **Vendor**: Ednovation ([https://ednovation.com](https://ednovation.com))
+- **Vendor**: [Ednovation](https://ednovation.com)
 - **App**: ParentCommApp (iOS)
 - **Platform**: Backend APIs serving iOS/Android apps
 - **Version**: Affected prior to 2022 remediation
@@ -44,19 +44,12 @@ resulted in expanded database output, confirming an **authentication-independent
 - **Sensitive data disclosure**: Unauthorized access to other child/parent/teacher records
 - **Database enumeration**: Potential for data extraction beyond target record
 
+## **Security Best Practices Recommended**:
+
+Vendors should validate and sanitize all input parameters server-side. Use parameterized queries and ORM frameworks to prevent injection flaws.
+
 ## Timeline
 
 - **2022-07**: Issue discovered and responsibly reported to vendor  
 - **2022-07**: Vendor acknowledged and deployed a patch  
 - **2025-07**: Disclosure and CVE request initiated  
-
-## Status
-
-- ✅ **Reported**: 2022  
-- ✅ **Vendor fixed**: 2022  
-- 🚩 **CVE Status**: Pending Assignment  
-- 📢 **Public Disclosure**: 2025-07  
-
-## Recommendations
-
-Vendors should validate and sanitize all input parameters server-side. Use parameterized queries and ORM frameworks to prevent injection flaws.
