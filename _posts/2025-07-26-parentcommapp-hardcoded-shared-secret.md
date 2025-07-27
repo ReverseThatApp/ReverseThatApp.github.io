@@ -1,7 +1,7 @@
 ---
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
-title: "[CVE REQUESTED] Broken JWT Authentication – Hardcoded Shared Secret in ParentCommApp (iOS))"
+title: "[CVE REQUESTED] Broken JWT Authentication – Hardcoded Shared Secret in ParentCommApp (iOS)"
 date: 2025-07-26
 cve: "Reported"
 status: "Fixed"

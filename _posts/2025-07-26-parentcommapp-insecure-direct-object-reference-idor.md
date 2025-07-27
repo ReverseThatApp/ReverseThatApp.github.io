@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] ParentCommApp Insecure Direct Object Reference (IDOR)"
-date: 2025-07-27
+date: 2025-07-26
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]
