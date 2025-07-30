@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] Unauthenticated Internal API Testing Interface Exposing Hardcoded Production Credentials"
-date: 2025-07-28
+date: 2025-07-29
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]
