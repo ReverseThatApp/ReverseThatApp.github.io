@@ -55,7 +55,7 @@ This setup enables an attacker to forge valid JWTs and access any API endpoints 
 - Unauthorized access to sensitive child, parent, and teacher data
 - Loss of data confidentiality and privacy
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - Never store JWT secrets on the client side
 - Server should handle all token generation and validation

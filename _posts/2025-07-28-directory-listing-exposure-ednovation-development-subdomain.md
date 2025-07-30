@@ -60,7 +60,7 @@ An attacker could:
 - **Potential exposure** of sensitive uploaded files.
 - **Facilitation of targeted exploitation** of backend scripts.
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - Disable directory listing at the web server level (`Options -Indexes` in Apache).
 - Restrict access to development environments with authentication.

@@ -69,7 +69,7 @@ Returns full student data for class `2`, including parent contact information.
 - Data enumeration risk: Entire student directory can be scraped unauthenticated
 - Violation of data protection obligations (e.g., PDPA, GDPR)
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - All APIs should enforce access control using secure authentication mechanisms (e.g., session tokens, JWT).
 - Remove plaintext password storage from both frontend and backend systems.

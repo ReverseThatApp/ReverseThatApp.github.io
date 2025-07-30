@@ -66,7 +66,7 @@ The server will return private data for the new child without any authorization 
 - Regulatory risk (e.g., PDPA, GDPR violations)
 - Enables enumeration attacks across the entire user base
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - Implement proper object-level access control in the backend
 - Validate that the `childId` belongs to the authenticated user

@@ -59,7 +59,7 @@ _**Figure: Test API Form**_
 - **Exposure of sensitive PII** in live systems.
 - **Potential compliance violations** under PDPA, GDPR, and similar laws.
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - Immediately restrict access to internal testing tools.
 - Remove hardcoded credentials from all environments.

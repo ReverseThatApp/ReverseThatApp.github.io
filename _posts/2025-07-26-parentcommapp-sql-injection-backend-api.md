@@ -44,7 +44,7 @@ resulted in expanded database output, confirming an **authentication-independent
 - **Sensitive data disclosure**: Unauthorized access to other child/parent/teacher records
 - **Database enumeration**: Potential for data extraction beyond target record
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 Vendors should validate and sanitize all input parameters server-side. Use parameterized queries and ORM frameworks to prevent injection flaws.
 

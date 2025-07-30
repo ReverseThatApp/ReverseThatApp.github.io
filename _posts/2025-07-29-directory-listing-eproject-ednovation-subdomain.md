@@ -70,7 +70,7 @@ An attacker could:
 - Potential exposure of sensitive configuration, API details, and operational files.
 - Facilitation of further targeted exploitation.
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - Disable directory listing in the web server configuration (Options -Indexes for Apache).
 - Restrict public access to non-essential directories.

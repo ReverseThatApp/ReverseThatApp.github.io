@@ -66,7 +66,7 @@ This is the MD5 of `123456`
 - If passwords are reused across other platforms (email, messaging apps), this could lead to wider compromise.
 - Violates OWASP recommendations and industry standards for password storage.
 
-## **Security Best Practices Recommended**:
+## Mitigation
 
 - Immediately remove MD5 hashing and switch to secure password hashing schemes:
     - bcrypt, scrypt, or argon2

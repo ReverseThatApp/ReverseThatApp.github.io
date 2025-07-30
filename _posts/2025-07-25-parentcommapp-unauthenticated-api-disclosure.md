@@ -63,7 +63,7 @@ This represents a **critical broken authentication flaw** with serious implicati
 
 The vendor has since migrated to new API endpoints which enforce proper authentication. The legacy endpoints that previously served this unauthenticated data have now been deprecated and disabled.
 
-**Security Best Practices Recommended**:
+Mitigation
 
 - Enforce token-based authentication on *all* sensitive APIs  
 - Validate access control contextually (e.g., user roles, ownership of child data)  
