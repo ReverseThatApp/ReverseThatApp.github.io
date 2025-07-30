@@ -68,6 +68,6 @@ An attacker could:
 
 ## Timeline
 
-- **2022-08**: Vulnerability discovered during related infrastructure testing and responsibly reported to vendor
-- **2022-08**: Vendor acknowledged and deployed a patch  
+- **2024-08**: Vulnerability discovered during related infrastructure testing and responsibly reported to vendor
+- **2024-09**: Vendor acknowledged and deployed a patch  
 - **2025-07**: Public disclosure and CVE request initiated

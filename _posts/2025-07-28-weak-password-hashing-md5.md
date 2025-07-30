@@ -76,8 +76,8 @@ This is the MD5 of `123456`
 
 ## Timeline
 
-- **2025-07**: Discovered while analyzing leaked student records via unauthenticated APIs, responsibly reported to vendor
-- **2022-08**: Vendor acknowledged and deployed a patch
+- **2024-07**: Discovered while analyzing leaked student records via unauthenticated APIs, responsibly reported to vendor
+- **2024-08**: Vendor acknowledged and deployed a patch
 - **2025-07**: Public disclosure and CVE request initiated
 
 

@@ -2,8 +2,8 @@
 layout: post
 title: "Cracking the Flare-On 11 CTF 2024: Challenge 1 - Frog"
 image:
-    path: https://lh3.googleusercontent.com/pw/AP1GczMc4Z0pvk-NzMtaw5InM5ZaRdvQYiryVJoQVvTHvZS4EmjlQoJZjRfkJxt10g2bByPFa2TXohKlsNdNF86Ji3nwKEQ-oqhvsqnsdqHHdMdQ-J3Ddd9YheV0-nzMOsZZpOOW3Zg-V7n2jHtrxNOps-jA=w734-h596-s-no-gm?authuser=2
-    alt: Challenge 1 - Frog
+    path: https://lh3.googleusercontent.com/pw/AP1GczP0zLtOz68UWrN7SPWAtqPNVJnoLM2N0XWbVm9Qz-qmqsSgGtKpRlploJIYP2PLSxiSN0twJO2YjaXWZA9jGLGKxioGowUk28oLo3QWC457L2M3WwLTW-kqYIKdXXaj8WcFBaaQxlcvgJeRgT0LTNxe=w2126-h714-s-no-gm
+    alt: Flare-On 11 Result
 tags: [flareon11, flareon-2024, ctf, flareon, python]
 categories: [CTF, Flareon 2024]
 ---
