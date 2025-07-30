@@ -79,6 +79,6 @@ Returns full student data for class `2`, including parent contact information.
 ## Timeline
 
 - **2022–06**: [Related flaws discovered in other Ednovation products (ParentCommApp iOS)](/disclosures/parentcommapp-api-auth-bypass/)
-- **2022-07**: This distinct issue discovered in AIMath Web App
-- **2022-08**: Vendor notified; acknowledged and fixed issue
-- **2025-07**: Disclosure and CVE request initiated  
+- **2022-07**: This distinct issue discovered in AIMath Web App, responsibly reported to vendor
+- **2022-08**: Vendor acknowledged and deployed a patch  
+- **2025-07**: Public disclosure and CVE request initiated  

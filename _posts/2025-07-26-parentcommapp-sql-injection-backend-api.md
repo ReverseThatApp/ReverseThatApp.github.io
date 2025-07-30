@@ -52,4 +52,4 @@ Vendors should validate and sanitize all input parameters server-side. Use param
 
 - **2022-07**: Issue discovered and responsibly reported to vendor  
 - **2022-07**: Vendor acknowledged and deployed a patch  
-- **2025-07**: Disclosure and CVE request initiated  
+- **2025-07**: Public disclosure and CVE request initiated  

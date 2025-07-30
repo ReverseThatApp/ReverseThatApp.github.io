@@ -66,4 +66,4 @@ This setup enables an attacker to forge valid JWTs and access any API endpoints 
 
 - **2022-09**: Issue discovered and responsibly reported to vendor  
 - **2022-09**: Vendor acknowledged and deployed a patch  
-- **2025-07**: Disclosure and CVE request initiated  
+- **2025-07**: Public disclosure and CVE request initiated  

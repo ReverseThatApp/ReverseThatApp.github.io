@@ -6,7 +6,7 @@ date: 2025-07-28
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]
-tags: [cve-requested, CVE, web-security, authentication, cryptography, md5, ednovation, vulnerability, ios, aimath, api]
+tags: [cve-requested, CVE, web-security, authentication, cryptography, md5, ednovation, vulnerability, aimath, api]
 permalink: /disclosures/aimath-weak-password-hashing/
 ---
 
@@ -32,7 +32,7 @@ This presents a serious cryptographic vulnerability and a violation of modern pa
 
 ## Vulnerability Details
 
-- The API responses from endpoints such as `GET /aimath.ednoland.com/classes/student/2` return user objects that include:
+- The API responses from endpoints such as `GET aimath.ednoland.com/classes/student/2` return user objects that include:
   - `username`
   - `email_account`
   - `mobile`
@@ -76,8 +76,8 @@ This is the MD5 of `123456`
 
 ## Timeline
 
-- **2025-07**: Discovered while analyzing leaked student records via unauthenticated APIs
-- **2022-08**: Vendor notified; acknowledged and fixed issue
-- **2025-07**: Disclosure and CVE request initiated
+- **2025-07**: Discovered while analyzing leaked student records via unauthenticated APIs, responsibly reported to vendor
+- **2022-08**: Vendor acknowledged and deployed a patch
+- **2025-07**: Public disclosure and CVE request initiated
 
 

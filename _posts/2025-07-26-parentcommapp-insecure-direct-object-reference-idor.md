@@ -76,4 +76,4 @@ The server will return private data for the new child without any authorization 
 
 - **2022-09**: Issue discovered and responsibly reported to vendor  
 - **2022-09**: Vendor acknowledged and deployed a patch  
-- **2025-07**: Disclosure and CVE request initiated  
+- **2025-07**: Public disclosure and CVE request initiated  

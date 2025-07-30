@@ -8,6 +8,9 @@ status: "Fixed"
 categories: [Disclosure]
 tags: [cve-requested, CVE, web-security,directory-listing, misconfiguration, ednovation, vulnerability]
 permalink: /disclosures/directory-listing-exposure-ednovation-development-subdomain/
+image:
+    path: https://lh3.googleusercontent.com/pw/AP1GczOn8f8iYCOddMiDc_oVcsweW4Va5X6TPjqwNzj7VHak_FK6Fq7J7atcfLxkys4l42nvMU-PmYvtUFFI3_f7oyoqpohaIUNqGLrw8VBHRd9Otj24xLI-fjZV2-KLnP3HZilnkR7A_x95C5U-TZ_ICQ__=w1232-h1264-s-no-gm
+    alt: Directory listing
 ---
 
 ## Summary
@@ -39,6 +42,9 @@ Directory listing revealed:
   - `themes/` (site styling assets)
   - `uploads/` (user-uploaded content)
 
+![Directory listing](https://lh3.googleusercontent.com/pw/AP1GczOn8f8iYCOddMiDc_oVcsweW4Va5X6TPjqwNzj7VHak_FK6Fq7J7atcfLxkys4l42nvMU-PmYvtUFFI3_f7oyoqpohaIUNqGLrw8VBHRd9Otj24xLI-fjZV2-KLnP3HZilnkR7A_x95C5U-TZ_ICQ__=w1232-h1264-s-no-gm)
+_**Figure: Directory listing**_
+
 Although clicking on `.php` files did not reveal their source code, knowledge of their existence provides attackers with valuable reconnaissance for crafting targeted attacks.
 
 ## Exploitation
@@ -64,4 +70,4 @@ An attacker could:
 
 - **2022-08**: Vulnerability discovered during related infrastructure testing and responsibly reported to vendor
 - **2022-08**: Vendor acknowledged and deployed a patch  
-- **2025-07**: Disclosure and CVE request initiated
+- **2025-07**: Public disclosure and CVE request initiated
