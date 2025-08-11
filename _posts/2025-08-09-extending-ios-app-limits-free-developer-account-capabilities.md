@@ -11,7 +11,7 @@ image:
 
 Apple’s free developer accounts offer a convenient way to test iOS apps using Xcode, but they impose a firm restriction: you’re limited to installing only three apps on your device at a time. If you attempt to add a fourth, Xcode will display the error message: `"The maximum number of apps for free development profiles has been reached."` This can be quite limiting for experimentation. In this beginner-friendly guide, we’ll explore how to extend this constraint on a jailbroken iOS device by modifying the `installd` process, providing step-by-step explanations to make the process approachable even for those new to iOS modifications.
 
-**Important**: This guide is intended solely for educational and research purposes on a jailbroken test device not used for personal or commercial purposes. Modifying iOS or bypassing Apple’s restrictions, including the 3-app limit, may violate the Apple Developer Program License Agreement (ADPLA), void warranties, and risk account suspension or device security issues. Proceed at your own risk and ensure compliance with Apple’s terms.
+**Important**: This guide is intended solely for educational and research purposes on a jailbroken test device not used for personal or commercial purposes. Modifying iOS or extending Apple’s restrictions, including the 3-app limit, may violate the Apple Developer Program License Agreement (ADPLA), void warranties, and risk account suspension or device security issues. Proceed at your own risk and ensure compliance with Apple’s terms.
 
 ## What You’ll Need
 
@@ -318,8 +318,6 @@ And this is a simplified version in Objective-C with meaningful variable names a
 4. **Limit Check**: If `refs.count > 3` (more than three apps) and the new `appIdentifier` isn’t in `refs`, it triggers the error.
 5. **Add App**: If the limit isn’t hit, it links the `appIdentifier` to the bundle’s URL and adds it to `refs`.
 
-The restriction hinges on `refs.count > 3 && ![refs containsObject:appIdentifier]`. To bypass it, we’ll make this condition `false` by tweaking `refs.count`.
-
 ## Step 3: Patch `installd` with LLDB
 
 We’ll use LLDB to dynamically patch `installd` on your jailbroken device, making it think fewer than three apps are installed.
@@ -458,7 +456,7 @@ Since `X0` reflects `3`, it activates the limit; adjust it to `2` to deceive the
 Process 364 resuming
 ```
 
-Upon success, the app installs without issue—test with another bundle identifier to verify the bypass is effective.
+Upon success, the app installs without issue—test with another bundle identifier to verify the extension is effective.
 
 ## Step 4: Patch with Frida (Alternative)
 
@@ -497,7 +495,7 @@ if (filteredInstalldModules.length > 0) {
             // Log current X0 value for verification
             console.log("Current refs.count (X0): " + this.context.x0.toInt32());
             
-            // Patch X0 to 2 to bypass the limit check
+            // Patch X0 to 2 to extend the limit check
             this.context.x0 = ptr(2);
             
             // Log the patched value
@@ -531,7 +529,7 @@ Frida script loaded. Ready to patch installd.
 Patched refs.count (X0): 2
 ```
 
-With the script active, attempt app installations from Xcode—the hook will automatically adjust the count, bypassing the limit without manual intervention each time.
+With the script active, attempt app installations from Xcode—the hook will automatically adjust the count, extending the limit without manual intervention each time.
 
 ## Step 5: Static Patching (Optional)
 
@@ -546,7 +544,7 @@ If you seek a more enduring solution that persists across restarts, consider sta
 
 ## Results
 
-With the bypass in place, you've successfully expanded beyond the three-app boundary. As an illustration, here's a device running eight apps installed under a single free account, demonstrating the effectiveness of the modifications:
+With the extension in place, you've successfully expanded beyond the three-app boundary. As an illustration, here's a device running eight apps installed under a single free account, demonstrating the effectiveness of the modifications:
 
 ![8 Apps Installed](https://lh3.googleusercontent.com/pw/AP1GczMhPGu172Juqs9_xvD1l43jmcSoKWSeoGoxUGwP5Hawwi44diN8rybcFJcQ1aT93yt4j7WHYjcHuoNfqrHo74ZL53d_1v-oyEbzlFzYlFywo691BDZ5ByVzMirvCW37DkPVPfdZysnWNb7V1C8GAi-6=w958-h1624-s-no-gm)
 *Figure: Eight Apps Installed with Free Account*
