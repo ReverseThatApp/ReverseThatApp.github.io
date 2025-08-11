@@ -548,6 +548,80 @@ With the extension in place, you've successfully expanded beyond the three-app b
 ![8 Apps Installed](https://lh3.googleusercontent.com/pw/AP1GczMhPGu172Juqs9_xvD1l43jmcSoKWSeoGoxUGwP5Hawwi44diN8rybcFJcQ1aT93yt4j7WHYjcHuoNfqrHo74ZL53d_1v-oyEbzlFzYlFywo691BDZ5ByVzMirvCW37DkPVPfdZysnWNb7V1C8GAi-6=w958-h1624-s-no-gm)
 *Figure: Eight Apps Installed with Free Account*
 
+## Bonus: Inspecting MobileInstallation Logs
+
+As a supplementary insight, let’s peek behind the curtain to see exactly what happens when the 3‑app limit is reached at the system level. The `installd` daemon keeps detailed records in the MobileInstallation logs, stored at `/private/var/installd/Library/Logs/MobileInstallation`
+
+Here’s an example log entry from a failed fourth app installation attempt:
+
+```
+Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) -[MIClientConnection _uninstallIdentities:withOptions:completion:]: Uninstall requested by installcoordinationd (pid 117 (501/501)) for identity [com.example.flutterHelloWorld1xz782/PersonalPersonaPlaceholderString] with options: {
+    WaitForStorageDeletion = 0;
+}
+Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) -[MIUninstaller performUninstallationByRevokingTemporaryReference:error:]: Taking termination assertion on com.example.flutterHelloWorld1xz782
+Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) -[MIUninstaller _uninstallBundleWithIdentity:linkedToChildren:waitForDeletion:uninstallReason:temporaryReference:wasLastReference:error:]: Uninstalling identifier com.example.flutterHelloWorld1xz782
+Mon Aug 11 14:09:16 2025 [8567] <err> (0x17002b000) -[MIUninstaller _uninstallBundleWithIdentity:linkedToChildren:waitForDeletion:uninstallReason:temporaryReference:wasLastReference:error:]: Destroying container com.example.flutterHelloWorld1xz782 with persona (null) at /private/var/containers/Bundle/Application/0E17174C-14FA-43BE-84F9-73F1A1786879
+Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) MIUninstallProfilesForAppIdentifier: Uninstalling profiles for **********.com.example.flutterHelloWorld1xz782
+Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) MIUninstallProfilesForAppIdentifier_block_invoke: Removing matching profile for **********.com.example.flutterHelloWorld1xz782: 09c78fdb-3b1d-41aa-ae1a-e3d061ec7c12
+Mon Aug 11 14:09:16 2025 [8567] <err> (0x17002b000) -[MIUninstaller _uninstallBundleWithIdentity:linkedToChildren:waitForDeletion:uninstallReason:temporaryReference:wasLastReference:error:]: Destroying container com.example.flutterHelloWorld1xz782 with persona 24571DA7-E66C-4D48-AC31-32C3F9F38336 at /private/var/mobile/Containers/Data/Application/C278AD12-A1FF-4179-8B62-6730A52CEA90
+Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) -[MILaunchServicesOperationManager _onQueue_addPendingLaunchServicesOperation:error:]: Added pending LS operation <MILaunchServicesUnregisterOperation: EE61C5E9-46AA-44E0-ADE9-1F91C9C73A47:3 com.example.flutterHelloWorld1xz782/MIInstallationDomainSystemShared>
+Mon Aug 11 14:09:17 2025 [8567] <notice> (0x17002b000) -[MILaunchServicesOperationManager _onQueue_removePendingLaunchServicesOperationForUUID:dueToLSSave:]: Removing operation after LS save: <MILaunchServicesUnregisterOperation: EE61C5E9-46AA-44E0-ADE9-1F91C9C73A47:3 com.example.flutterHelloWorld1xz782/MIInstallationDomainSystemShared>
+Mon Aug 11 14:09:37 2025 [8567] <notice> (0x17002b000) -[MIClientConnection _installURL:identity:targetingDomain:options:completion:]: Running installation as QOS_CLASS_USER_INITIATED
+Mon Aug 11 14:09:37 2025 [8567] <notice> (0x17002b000) -[MIClientConnection _doInstallationForURL:identity:domain:options:completion:]: Install of "/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.installcoordinationd/Library/InstallCoordination/PromiseStaging/46E2CDAE-A56A-4A18-BDBD-1A7E8ABC295E/Flutter Hello World.app" type Placeholder (LSInstallType = 1, Domain: MIInstallationDomainDefault) requested by installcoordinationd (pid 117 (501/501))
+Mon Aug 11 14:09:37 2025 [8567] <notice> (0x17002b000) -[MIInstaller _installInstallable:containingSymlink:error:]: Installing <MIInstallableBundle ID=com.example.flutterHelloWorld1xz782; Version=1, ShortVersion=(null)>
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17002b000) -[MIContainer makeContainerLiveReplacingContainer:reason:waitForDeletion:withError:]: Made container live for com.example.flutterHelloWorld1xz782 at /private/var/mobile/Containers/Data/Application/632659FC-08F0-488F-84FD-D81F377D1786
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17002b000) -[MIContainer makeContainerLiveReplacingContainer:reason:waitForDeletion:withError:]: Made container live for com.example.flutterHelloWorld1xz782 at /private/var/containers/Bundle/Application/30CD4A97-B604-4305-95AA-7BE43D72DBD4
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17002b000) -[MILaunchServicesOperationManager _onQueue_addPendingLaunchServicesOperation:error:]: Added pending LS operation <MILaunchServicesRegisterOperation: DF6E175B-4C9A-4BBF-BF8B-032F7362BE0F:4 com.example.flutterHelloWorld1xz782/MIInstallationDomainSystemShared personas:[PersonalPersonaPlaceholderString]>
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17002b000) -[MIInstaller performInstallationWithError:]: Install Successful for (Placeholder:com.example.flutterHelloWorld1xz782); Staging: 0.01s; Waiting: 0.00s; Preflight/Patch: 0.00s, Verifying: 0.03s; Overall: 0.25s
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17002b000) -[MIClientConnection updatePlaceholderMetadataForApp:installType:failureReason:underlyingError:failureSource:completion:]: Update placeholder metadata requested by client installcoordinationd (pid 117 (501/501)) for app com.example.flutterHelloWorld1xz782 installType = 1 failureReason = 0 underlyingError = (null) failureSource = 0
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17025b000) -[MIClientConnection _installURL:identity:targetingDomain:options:completion:]: Running installation as QOS_CLASS_USER_INITIATED
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17025b000) -[MIClientConnection _doInstallationForURL:identity:domain:options:completion:]: Install of "/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.installcoordinationd/Library/InstallCoordination/PromiseStaging/D6D8B698-0238-42CE-80ED-641F1E513487/Runner.app" type Developer (LSInstallType = (null), Domain: MIInstallationDomainDefault) requested by installcoordinationd (pid 117 (501/501))
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17025b000) -[MIInstaller _installInstallable:containingSymlink:error:]: Installing <MIInstallableBundle ID=com.example.flutterHelloWorld1xz782; Version=1, ShortVersion=1.0.0>
+Mon Aug 11 14:09:38 2025 [8567] <notice> (0x17025b000) MIUninstallProfilesForAppIdentifier: Uninstalling profiles for **********.com.example.flutterHelloWorld1xz782
+Mon Aug 11 14:09:39 2025 [8567] <notice> (0x17002b000) -[MILaunchServicesOperationManager _onQueue_removePendingLaunchServicesOperationForUUID:dueToLSSave:]: Removing operation after LS save: <MILaunchServicesRegisterOperation: DF6E175B-4C9A-4BBF-BF8B-032F7362BE0F:4 com.example.flutterHelloWorld1xz782/MIInstallationDomainSystemShared personas:[PersonalPersonaPlaceholderString]>
+Mon Aug 11 14:09:39 2025 [8567] <err> (0x17025b000) -[MIFreeProfileValidatedAppTracker _onQueue_addReferenceForApplicationIdentifier:bundle:error:]: 179: This device has reached the maximum number of installed apps using a free developer profile: {(
+    "**********.com.example.flutterHelloWorld1xz",    
+    "**********.com.example.flutterHelloWorld1xz785",
+    "**********.com.example.flutterHelloWorld1xz788",
+    "**********.com.example.flutterHelloWorld1xz783",
+    "**********.com.example.flutterHelloWorld1xz786",
+    "**********.com.example.flutterHelloWorld1xz784",
+    "**********.com.example.flutterHelloWorld1xz787"
+)}
+Mon Aug 11 14:09:39 2025 [8567] <err> (0x17025b000) -[MIInstaller _installInstallable:containingSymlink:error:]: Finalize stage failed
+Mon Aug 11 14:09:39 2025 [8567] <notice> (0x17002b000) -[MIClientConnection _uninstallIdentities:withOptions:completion:]: Uninstall requested by installcoordinationd (pid 117 (501/501)) for identity [com.example.flutterHelloWorld1xz782/PersonalPersonaPlaceholderString] with options: {
+    UninstallParallelPlaceholder = 1;
+}
+Mon Aug 11 14:09:39 2025 [8567] <notice> (0x17002b000) -[MIUninstaller performUninstallationByRevokingTemporaryReference:error:]: Taking termination assertion on com.example.flutterHelloWorld1xz782
+Mon Aug 11 14:09:39 2025 [8567] <notice> (0x1702e7000) -[MIClientConnection updatePlaceholderMetadataForApp:installType:failureReason:underlyingError:failureSource:completion:]: Update placeholder metadata requested by client installcoordinationd (pid 117 (501/501)) for app com.example.flutterHelloWorld1xz782 installType = 7 failureReason = 14 underlyingError = Error Domain=MIInstallerErrorDomain Code=13 "This device has reached the maximum number of installed apps using a free developer profile: {(
+    "**********.com.example.flutterHelloWorld1xz",
+    "**********.com.example.flutterHelloWorld1xz785",
+    "**********.com.example.flutterHelloWorld1xz788",
+    "**********.com.example.flutterHelloWorld1xz783",
+    "**********.com.example.flutterHelloWorld1xz786",
+    "**********.com.example.flutterHelloWorld1xz784",
+    "**********.com.example.flutterHelloWorld1xz787"
+)}" UserInfo={LibMISErrorNumber=-402620383, LegacyErrorString=ApplicationVerificationFailed, SourceFileLine=179, FunctionName=-[MIFreeProfileValidatedAppTracker _onQueue_addReferenceForApplicationIdentifier:bundle:error:], NSLocalizedDescription=This device has reached the maximum number of installed apps using a free developer profile: {(
+    "**********.com.example.flutterHelloWorld1xz",
+    "**********.com.example.flutterHelloWorld1xz785",
+    "**********.com.example.flutterHelloWorld1xz788",
+    "**********.com.example.flutterHelloWorld1xz783",
+    "**********.com.example.flutterHelloWorld1xz786",
+    "**********.com.example.flutterHelloWorld1xz784",
+    "**********.com.example.flutterHelloWorld1xz787"
+)}} failureSource = 17
+```
+
+**What This Reveals**:
+
+* The rejection comes from `MIFreeProfileValidatedAppTracker _onQueue_addReferenceForApplicationIdentifier:bundle:error:`.
+* `Code=13` and `LegacyErrorString=ApplicationVerificationFailed` confirm the internal count exceeded the limit.
+* The log enumerates **all currently installed bundle identifiers** under the free developer profile.
+* `failureSource = 17` points to the specific internal check that failed.
+
+Seeing these logs in action helps link the familiar XCode error to the precise internal enforcement mechanism—an invaluable clue for reverse engineering or troubleshooting on jailbroken test devices.
+
+
 ## Conclusion
 
 Through this process of patching `installd` using LLDB or Frida, you've effectively sidestepped Apple’s 3-app limit, enabling the installation of additional apps for enhanced testing flexibility. This guide has equipped you with the knowledge to locate restriction logic, configure debugging environments, and implement targeted patches. These foundational skills pave the way for deeper iOS explorations, but it's vital to apply them ethically on test devices, respecting Apple’s guidelines and prioritizing device security. Enjoy your expanded development capabilities!
