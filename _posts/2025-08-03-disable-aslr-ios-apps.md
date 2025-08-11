@@ -8,8 +8,6 @@ image:
     alt: Disabling ASLR on iOS
 ---
 
-# Beginner's Guide to Disabling ASLR in iOS Apps
-
 Address Space Layout Randomization (ASLR) is a security feature in iOS that randomizes where apps load in memory, making it harder for attackers to exploit vulnerabilities. For security researchers, however, disabling ASLR can simplify analyzing apps by ensuring consistent memory layouts. In this guide, we'll walk through how to disable ASLR for all iOS apps by modifying the `launchd` process, which launches all user apps. This process, known as patching, requires a jailbroken device and some technical know-how, but we'll break it down step-by-step to make it approachable.
 
 **Important**: This is for research purposes only on a jailbroken test device. Disabling ASLR reduces security, so proceed with caution and never do this on a personal device.
