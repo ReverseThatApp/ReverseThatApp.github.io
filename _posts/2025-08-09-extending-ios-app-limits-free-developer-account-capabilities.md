@@ -324,9 +324,7 @@ We’ll use LLDB to dynamically patch `installd` on your jailbroken device, maki
 
 ### Prepare Debugging
 
-Setting up debugging requires `debugserver` running on your device to facilitate remote connections. Locate `debugserver` in the mounted firmware at `/usr/libexec/debugserver`, then follow [this guide](https://felipejfc.medium.com/the-ultimate-guide-for-live-debugging-apps-on-jailbroken-ios-12-4c5b48adf2fb) to sign it with proper entitlements (e.g., `com.apple.security.get-task-allow`) and copy it to your device. 
-
-Follow this guide to complete the signing and copy it to your device. Once ready, initiate the debugging session:
+Setting up debugging requires `debugserver` running on your device to facilitate remote connections. Locate `debugserver` in the mounted firmware at `/usr/libexec/debugserver`, then follow [this guide](https://felipejfc.medium.com/the-ultimate-guide-for-live-debugging-apps-on-jailbroken-ios-12-4c5b48adf2fb) to sign it with proper entitlements (e.g., `com.apple.security.get-task-allow`) and copy it to your device. Once ready, initiate the debugging session:
 
 1. **Simplify SSH**: Configure your `~/.ssh/config` file to streamline connections to the device, reducing the need for repetitive command-line arguments:
    ```bash
@@ -336,6 +334,7 @@ Follow this guide to complete the signing and copy it to your device. Once ready
        Port 2222
        ServerAliveInterval 30
        ServerAliveCountMax 1200
+   ```
    
 
 2. **Forward Ports**: On your host machine:
@@ -536,7 +535,7 @@ With the script active, attempt app installations from Xcode—the hook will aut
 If you seek a more enduring solution that persists across restarts, consider statically patching the `installd` binary to raise the comparison threshold, such as changing `CMP X0, #2` to `CMP X0, #0x20` to support up to 32 apps (actually you cant create more than 10 App IDs every 7 days):
 
 1. Open the binary in IDA or a hex editor to locate and modify the comparison instruction, effectively increasing the allowed app count.
-2. Re-sign the altered binary with ldid, applying the original entitlements to maintain compatibility.
+2. Re-sign the altered binary with `ldid`, applying the original entitlements to maintain compatibility.
 3. Install the `AppSync Unified` tweak via your package manager to disable codesign verification, preventing rejection of the modified binary.
 4. Replace the original `/usr/libexec/installd` on the device with your patched version, then restart the daemon to apply the changes.
 
