@@ -554,7 +554,7 @@ As a supplementary insight, let’s peek behind the curtain to see exactly what 
 
 Here’s an example log entry from a failed fourth app installation attempt:
 
-```
+```text
 Mon Aug 11 14:09:16 2025 [8567] <notice> (0x17002b000) -[MIClientConnection _uninstallIdentities:withOptions:completion:]: Uninstall requested by installcoordinationd (pid 117 (501/501)) for identity [com.example.flutterHelloWorld1xz782/PersonalPersonaPlaceholderString] with options: {
     WaitForStorageDeletion = 0;
 }
