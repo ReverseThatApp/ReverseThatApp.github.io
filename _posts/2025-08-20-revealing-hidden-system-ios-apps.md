@@ -909,32 +909,31 @@ j__objc_storeStrong_1((id *)&v21_fbsBundleInfo->_tags, appTags);
 
 This code retrieves the app’s tags, checks if the app type is `"Hidden"`, and ensures a `"hidden"` tag is included, either by appending it or creating a new tag list. The tags are stored in the `_tags` property of the `FBSApplicationInfo` object.
 
-![FBSApplicationInfo._tags](https://lh3.googleusercontent.com/pw/AP1GczMEO5uSt_liQpKlhC56u3nyFbSq8Z1MtDASFzFERRjLp-z2jaiJj3Ny97Q8WGMNY50BxWLAX3UrB86oSXA1f83_9QpPu3QbDXJLqF_VQPKkX0QwmrpHa5ZtlhglRLdER_m40QGdZgc02_4daWJoczZM=w2126-h948-s-no-gm)
-*Figure: _OBJC_IVAR_$_FBSApplicationInfo._tags*
+![FBSApplicationInfo tags](https://lh3.googleusercontent.com/pw/AP1GczMEO5uSt_liQpKlhC56u3nyFbSq8Z1MtDASFzFERRjLp-z2jaiJj3Ny97Q8WGMNY50BxWLAX3UrB86oSXA1f83_9QpPu3QbDXJLqF_VQPKkX0QwmrpHa5ZtlhglRLdER_m40QGdZgc02_4daWJoczZM=w2126-h948-s-no-gm)
+*Figure: FBSApplicationInfo_tags*
 
 ### Exploring the Tags Getter
 
 The `-[FBSApplicationInfo tags]` method serves as the getter for the `_tags` property. Searching for `$tags` in IDA’s `Functions` tab reveals multiple synthetic thunk functions created by IDA for readability:
 
 ```assembly
-_objc_msgSend$tagSpecification	CoreServices:__objc_stubs
-_objc_msgSend$tags	            FrontBoardServices:__objc_stubs
-_objc_msgSend$tags_0	        FrontBoard:__objc_stubs
-_objc_msgSend$tags_1	        SpringBoardHome:__objc_stubs
-_objc_msgSend$tagsForIcon_	    SpringBoardHome:__objc_stubs
-_objc_msgSend$tags_2	        SpringBoard:__objc_stubs
+_objc_msgSend$tagSpecification	  CoreServices:__objc_stubs
+_objc_msgSend$tags	              FrontBoardServices:__objc_stubs
+_objc_msgSend$tags_0	          FrontBoard:__objc_stubs
+_objc_msgSend$tags_1	          SpringBoardHome:__objc_stubs
+_objc_msgSend$tagsForIcon_	      SpringBoardHome:__objc_stubs
+_objc_msgSend$tags_2	          SpringBoard:__objc_stubs
 ```
 
-> These `_objc_msgSend$tags_X` functions are not actual binary functions but IDA’s way of labeling calls to `objc_msgSend` with specific selectors. The suffixes (`_1`, `_2`) ensure unique symbol names. By filtering for `tags]` in the `Functions` tab, we can identify the relevant methods
-{: .prompt-info}
+These `_objc_msgSend$tags_X` functions are not actual binary functions but IDA’s way of labeling calls to `objc_msgSend` with specific selectors. The suffixes (`_1`, `_2`) ensure unique symbol names. By filtering for `tags]` in the `Functions` tab, we can identify the relevant methods
 
 ```assembly
--[FBSApplicationInfo tags]	    FrontBoardServices:__text
--[FBSDisplayConfiguration tags]	FrontBoardServices:__text
--[SBLeafIcon tags]	            SpringBoardHome:__text
--[SBIcon tags]	                SpringBoardHome:__text
--[SBHSimpleApplication tags]	SpringBoardHome:__text
--[SBApplication tags]	        SpringBoard:__text
+-[FBSApplicationInfo tags]	      FrontBoardServices:__text
+-[FBSDisplayConfiguration tags]	  FrontBoardServices:__text
+-[SBLeafIcon tags]	              SpringBoardHome:__text
+-[SBIcon tags]	                  SpringBoardHome:__text
+-[SBHSimpleApplication tags]	  SpringBoardHome:__text
+-[SBApplication tags]	          SpringBoard:__text
 ```
 
 After tracing the XREFs, we confirm that `_objc_msgSend$tags_1` and `_objc_msgSend$tags_2` are the correct calls to `-[FBSApplicationInfo tags]`.
@@ -949,6 +948,60 @@ After tracing the XREFs, we confirm that `_objc_msgSend$tags_1` and `_objc_msgSe
 Further exploration of the cross-references (XREFs) reveals that `SBAppTags` plays a critical role in the `SBIconModel` class, specifically within methods like `-[SBIconModel shouldAvoidCreatingIconForApplication:]` and `-[SBHIconModel isIconVisible:]`. These methods act as supporting functions for `SBIconController`, which is tasked with rendering all application icons on the iOS Home screen, ensuring that only the appropriate icons are displayed based on the app’s metadata.
 
 For those interested in delving deeper into iOS Home screen mechanics, several methods are worth investigating. These include `-[SBIconVisibilityService _visibleIdentifiersChanged:]`, which handles changes in visible app identifiers, `-[SBIconController _mutateIconListsForInstalledAppsDidChangeWithController:added:modified:removed:]`, which manages updates to installed apps, `-[SBApplicationRestrictionController _postRestrictionStateToObservers:]`, which notifies observers of restriction changes, and `-[SBHIconManager updateVisibleIconsToShowLeafIcons:hideLeafIcons:forceRelayout:]`, which controls the visibility and layout of icons. These methods offer valuable insights into how iOS manages app presentation.
+
+```c
+bool __cdecl -[SBIconModel shouldAvoidCreatingIconForApplication:](SBIconModel *self, SEL a2, id a3)
+{
+  SBApplication *sbApplication; // x19
+  unsigned __int8 v5; // w22
+  __int64 v6; // x0
+  void *v7; // x23
+  SBApplicationInfo *sbApplicationInfo; // x20
+  unsigned __int8 has_hiddenTag; // w21
+  void *tags; // x21
+  unsigned __int64 isVisibilityOverride; // x22
+  objc_super v13; // [xsp+0h] [xbp-40h] BYREF
+
+  sbApplication = (SBApplication *)objc_retain(a3);
+  v13.receiver = self;
+  v13.super_class = (Class)&OBJC_CLASS___SBIconModel;
+  v5 = -[SBHIconModel shouldAvoidCreatingIconForApplication:](
+         &v13,
+         "shouldAvoidCreatingIconForApplication:",
+         sbApplication);
+  v6 = objc_opt_self_129(&OBJC_CLASS___SBApplication);
+  v7 = (void *)objc_claimAutoreleasedReturnValue_248(v6);
+  if ( (objc_opt_isKindOfClass_232(sbApplication, v7) & 1) != 0 )
+    sbApplicationInfo = (SBApplicationInfo *)objc_claimAutoreleasedReturnValue_248(-[SBApplication info](sbApplication, "info"));
+  else
+    sbApplicationInfo = 0LL;
+  objc_release(v7);
+  if ( (v5 & 1) != 0 )
+    goto LABEL_5;
+  if ( self->_createsIconsForInternalApps )
+    goto CHECK_HIDDEN_TAG_LABEL;
+  tags = (void *)objc_claimAutoreleasedReturnValue_248(-[SBApplicationInfo tags](sbApplicationInfo, "tags"));
+  if ( ((unsigned int)objc_msgSend(tags, "containsObject:", CFSTR("SBInternalAppTag")) & 1) == 0 )
+  {
+    objc_release(tags);
+    goto CHECK_HIDDEN_TAG_LABEL;
+  }
+  isVisibilityOverride = -[SBApplicationInfo visibilityOverride](sbApplicationInfo, "visibilityOverride");
+  objc_release(tags);
+  if ( isVisibilityOverride )
+  {
+CHECK_HIDDEN_TAG_LABEL:
+    has_hiddenTag = -[SBApplicationInfo hasHiddenTag](sbApplicationInfo, "hasHiddenTag");
+    goto RETURN_LABEL;
+  }
+LABEL_5:
+  has_hiddenTag = 1;
+RETURN_LABEL:
+  objc_release(sbApplicationInfo);
+  objc_release(sbApplication);
+  return has_hiddenTag;
+}
+```
 
 > The `SBIconController` serves as the central component within `SpringBoard`, orchestrating the layout and presentation of the Home screen. It oversees the arrangement of app icons, folders, and widgets, ensuring a cohesive user interface. By utilizing a collection view-like structure through the `SBIconListView` class, it organizes icons into individual pages or grids. Additionally, `SBIconController` manages user interactions—such as tapping, dragging, or rearranging icons—and collaborates with other system components to update icon states, including badges, notifications, and folder contents, maintaining a dynamic and responsive Home screen experience.
 {: .prompt-info}
@@ -1161,7 +1214,7 @@ NIC 2.0 - New Instance Creator
   [13.] iphone/tweak
   [14.] iphone/tweak_swift
   ...
-Choose a Template (required): 1
+Choose a Template (required): 13
 Project Name (required): ShowSystemHiddenApps
 Package Name [com.yourcompany.showsystemhiddenapps]: com.rta.showsystemhiddenapps
 Author/Maintainer Name: RTA
@@ -1208,7 +1261,7 @@ Navigate to the project directory and edit `Tweak.x` to hook into `SpringBoard`�
 
 This tweak hooks the `tags` method of `SBApplicationInfo`, checks for the `hidden` tag, and removes it, allowing `SpringBoard` to display the app. 
 
-Then modify `Makefile` accordingly:
+Then modify `Makefile` file accordingly:
 ```bash
 TARGET := iphone:clang:latest:15.0
 ARCHS = arm64 arm64e
