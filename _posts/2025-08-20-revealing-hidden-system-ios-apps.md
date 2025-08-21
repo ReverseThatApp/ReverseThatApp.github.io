@@ -1373,7 +1373,7 @@ default	12:36:01.356512+0800	SpringBoard	[Tweak] Removing 'hidden' tag in appTag
 
 ## Fun with iSnake Tweak
 
-For a creative twist, I developed the `iSnake` tweak a few years ago, which transforms Home screen app icons into a playable Snake game. Add my repository to Cydia or Sileo to try it out: [https://ReverseThatApp.github.io/cydia](https://ReverseThatApp.github.io/cydia)
+For a creative twist, I developed the `iSnake` tweak a few years ago, which transforms Home screen app icons into a playable Snake game. Add my repository to Cydia or Sileo to try it out: [https://RevertThat.app/cydia](https://RevertThat.app/cydia)
 
 This tweak, compatible with rootful jailbreaks (note: it may not work on rootless setups), activates with a double-tap on the Home screen, turning your app icons into a nostalgic Snake game. The figure below showcases this playful modification:
 
