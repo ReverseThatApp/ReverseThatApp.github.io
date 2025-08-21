@@ -453,7 +453,7 @@ Binary file ./Applications/FindMyRemoteUIService.app/Info.plist matches
 Binary file ./Applications/AuthenticationServicesUI.app/Info.plist matches
 ```
 
-### Examining `Info.plist` and SBAppTags
+### Examining `Info.plist` and `SBAppTags`
 
 Each iOS app bundle contains an `Info.plist` file that defines its properties, such as the bundle identifier and display name. For system apps, this file may include an `SBAppTags` key, which `SpringBoard` uses to categorize apps. The `hidden` tag within `SBAppTags` is particularly significant, as it instructs `SpringBoard` to exclude the app from the Home screen and Spotlight search.
 
@@ -909,7 +909,7 @@ j__objc_storeStrong_1((id *)&v21_fbsBundleInfo->_tags, appTags);
 
 This code retrieves the app’s tags, checks if the app type is `"Hidden"`, and ensures a `"hidden"` tag is included, either by appending it or creating a new tag list. The tags are stored in the `_tags` property of the `FBSApplicationInfo` object.
 
-![_OBJC_IVAR_$_FBSApplicationInfo._tags](https://lh3.googleusercontent.com/pw/AP1GczMEO5uSt_liQpKlhC56u3nyFbSq8Z1MtDASFzFERRjLp-z2jaiJj3Ny97Q8WGMNY50BxWLAX3UrB86oSXA1f83_9QpPu3QbDXJLqF_VQPKkX0QwmrpHa5ZtlhglRLdER_m40QGdZgc02_4daWJoczZM=w2126-h948-s-no-gm)
+![FBSApplicationInfo._tags](https://lh3.googleusercontent.com/pw/AP1GczMEO5uSt_liQpKlhC56u3nyFbSq8Z1MtDASFzFERRjLp-z2jaiJj3Ny97Q8WGMNY50BxWLAX3UrB86oSXA1f83_9QpPu3QbDXJLqF_VQPKkX0QwmrpHa5ZtlhglRLdER_m40QGdZgc02_4daWJoczZM=w2126-h948-s-no-gm)
 *Figure: _OBJC_IVAR_$_FBSApplicationInfo._tags*
 
 ### Exploring the Tags Getter
