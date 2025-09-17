@@ -154,7 +154,7 @@ _**Figure: App before symbols renaming**_
 
 Using `dump.dart`, we can write an IDA Python script to rename functions based on their offsets relative to the exported symbol `_kDartIsolateSnapshotInstructions` (located at `0x000000000000E8C0` in this case):
 
-![Exported _kDartIsolateSnapshotInstructions address](https://lh3.googleusercontent.com/pw/AP1GczNJq5MGJO2MGq9WiitbPjC_9Ko-ZykBBaDfqbbBsmOXFvbk93Tvv6wJhhNbcoOaDGi3fTHXqBQML0BOHyVu-pDCEXsk3zTd01TOD5tLCOKKdHI2AOjtIjpismUZVlMx-fVH1xEJxtGtfO7bwh1Ekb7c=w2164-h200-s-no-gm)
+![Exported kDartIsolateSnapshotInstructions address](https://lh3.googleusercontent.com/pw/AP1GczNJq5MGJO2MGq9WiitbPjC_9Ko-ZykBBaDfqbbBsmOXFvbk93Tvv6wJhhNbcoOaDGi3fTHXqBQML0BOHyVu-pDCEXsk3zTd01TOD5tLCOKKdHI2AOjtIjpismUZVlMx-fVH1xEJxtGtfO7bwh1Ekb7c=w2164-h200-s-no-gm) 
 _**Figure: Exported _kDartIsolateSnapshotInstructions address**_
 
 Here’s the script used to rename symbols:
