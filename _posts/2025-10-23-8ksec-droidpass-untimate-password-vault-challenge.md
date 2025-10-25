@@ -15,7 +15,7 @@ permalink: /reverse-engineering-droidpass-flutter-password-vault/
 > DroidPass automatically detects if your device is running in a tampered environment and takes appropriate security measures to protect your data. With secure encryption keys and multiple layers of security, your passwords are protected by the most advanced security techniques available. The clean, modern interface makes managing your digital life effortless while keeping your sensitive information under lock and key."
 {: .prompt-info}
 
-![8ksec DroidPass - Ultimate Password Vault](https://lh3.googleusercontent.com/pw/AP1GczMvPKFQKIqsBW2bmGum62_Jhqo1_wfg43TxcX_zf2plsMCFADascfZ06mZeGRbTsYzT__EtAG031XlvcofmPsHBFlJ1rv1C6ptLtvKRFNwVMvPCUJbygOnLaWI39AuZ5gWN4mTky8kDmRGxLVtnpXIZ=w322-h654-s-no-gm)
+![8ksec DroidPass - Ultimate Password Vault](https://lh3.googleusercontent.com/pw/AP1GczPmwdRNhWmNw9EG4bTchi_-wjlslwCCxi_KUtiMzgh-KYFrZB4-K68h7ahq-G3toi2agrDrWJM4qdZ68uEXP1tqybBq607X7FDBrw2RpJIAh38TQvQd1PehriX2WdqcA3HAGIHzi6PGn3ajQUo9OamS=w560-h622-s-no-gm)
 _**Figure: 8ksec DroidPass - Ultimate Password Vault**_
 
 # Objective
@@ -401,7 +401,7 @@ That converts a huge chunk of previously unknown functions into a working map.
 Next, inspect the symbol table and cross-references, and hunt for Dart/Flutter runtime stubs and class names — Flutter/Dart binaries expose many recognizable helper stubs in the disassembly. In this challenge the focus is encrypting the database password, so once symbols are applied search for keywords such as `encrypt`.
 
 
-```C
+```c
 Function name                                                               Start               Length
 --------------------------------------------------------------------------------------------------------
 AllocateEncryptedStub_27b950	                                            000000000027B950	00000058
@@ -449,7 +449,7 @@ Switching to pseudocode (Ida decompiler view) reveals the constructor's overall 
 
 Reading the pseudocode, the flow is evident: everything required to reconstruct the key is present in the binary and deterministic.
 
-```C
+```c
 __int64 __fastcall droid_pass_services_encryption_service_EncryptionService::ctor_2856dc(__int64 a1, __int64 a2)
 {
   __int64 v2; // x15
@@ -894,7 +894,7 @@ A close look at the constructor’s store sequence shows these immediate constan
 
 As we can see, there are 27 bytes being stored in the array:
 
-```C
+```c
 [
     0x82, 0xE4, 0xBA, 0xCE, 0xC8, 0xBE, 0xC2, 0x82, 0x82,
     0xA2, 0xAA, 0xE0, 0xCA, 0xE4, 0xA2, 0xCA, 0xC6, 0xE4,
@@ -917,7 +917,7 @@ Smi_raw = (value << 1) | tag_bits
 
 What this means for static analyzers: the immediate values you see in AOT code are often `value << 1`. When the Dart runtime reads the value (e.g., for `String.fromCharCodes`), it performs the corresponding **unbox/untag** operation (a right shift `>> 1`) to recover the original integer codepoint.
 
-```C
+```c
 value = Smi_raw >> 1   // remove tag / shift back to real integer
 ```
 
@@ -948,7 +948,7 @@ Let’s take the first stored immediate as an example.
 - The disassembly shows that `0x82` is written into the array element.
 - This value represents the **raw Smi** encoding. To get the real character code, we unbox it:
 
-```C
+```c
 stored_raw = 0x82  // decimal 130
 real_codepoint = stored_raw >> 1  // 65
 character = chr(65)  // 'A'
