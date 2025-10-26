@@ -151,9 +151,9 @@ Loading `libapp.so` into IDA initially shows a stripped binary with very few hum
 ![libapp.so stripped symbols](https://lh3.googleusercontent.com/pw/AP1GczOSIjbH5vcAi3M-OZqfxOqwXRvhSbuQrQ5pFCxBjUoqmDL2yEhOP2_kkKbpIEEJ_gA9CoCTasaGt8Hezb1AKWx4cV7Q4vtYqw5qQH3shNc-KisEyCli8Rb1djQqlRnIr51K6qdwZKVBNO0Ioli7NAvw=w1550-h652-s-no-gm?authuser=2)
 _**Figure: libapp.so stripped symbols**_
 
-In this challenge, a string like `"package:droid_pass/services/encryption_service.dart"` appears in the rodata and leads to a small set of functions that implement encryption and decryption. The disassembly at first is just raw machine code, but those strings confirm the presence of a Dart class named `EncryptionService`.
+In this challenge, a string like `"package:droid_pass/services/encryption_service.dart"` appears in the `.rodata` and leads to a small set of functions that implement encryption and decryption. The disassembly at first is just raw machine code, but those strings confirm the presence of a Dart class named `EncryptionService`.
 
-```assembly
+```asm
 .rodata:000000000002025A                 DCB 0x70 ; p
 .rodata:000000000002025B                 DCB 0x61 ; a
 .rodata:000000000002025C                 DCB 0x63 ; c
@@ -271,8 +271,6 @@ Use `File -> Script file...` in IDA to run the `addNames.py` script created by B
 ![IDA applied Dart symbols](https://lh3.googleusercontent.com/pw/AP1GczP4kAjFDe24zslc1sVCyXRXl3lJCG9JYrXgSkxQSvGEkv0mcm2pVS1gwdruAe3DV0N66taoIr0ZoOwiQ9yi8hUK_2BGWqDV-qshyP3XlBTMdmFTAJyl0T5ERZ0CDvmXAbq75BiunjWHUALdvztMnqiQ=w1516-h652-s-no-gm)
 _**Figure: IDA applied Dart symbols**_
 
-If you are using IDA 9, there may be compatibility issues because `ida_struct` APIs changed. A small shim that wraps `ida_typeinf` equivalents or provides a compatibility layer usually fixes name application errors in generated scripts.
-
 ```python
 import ida_funcs
 import idaapi
@@ -334,8 +332,7 @@ def create_Dart_structs():
 	ida_struct.set_member_cmt(ida_struct.get_member(struc, 129400), '''Null''', True)
     ...
 ```
-
-If IDA complains on `ida_struct` (IDA 9), a lightweight shim lets the Blutter-produced script run without major edits:
+If you are using IDA 9, there may be compatibility issues because `ida_struct` APIs changed. I wrote a lightweight shim lets the Blutter-produced script run without major edits:
 
 ```python
 # ---- ida_struct compatibility shim for IDA 9+ ----
@@ -390,11 +387,6 @@ except Exception:
 # ---- end shim ----
 ```
 
-Applying the symbol script will populate function names such as:
-- `encryption_service_EncryptionService__ctor_*`
-- `encryption_service_EncryptionService__encrypt_*`
-- `encryption_service_EncryptionService__decrypt_*`
-
 That converts a huge chunk of previously unknown functions into a working map.
 
 ## Identify the relevant code region
@@ -440,12 +432,12 @@ pointycastle$block$modes$ige_IGEBlockCipher___encryptBlock_52fb58	        000000
 Switching to pseudocode (Ida decompiler view) reveals the constructor's overall algorithm. In plain terms:
 
 1. Allocate a list and initialize it with 27 immediate byte-like constants.
-2. The constructor then splits these 27 elements into three sublists (9 elements each).
+2. The constructor then splits these 27 elements into three sublists.
 3. Each sublist is converted to a Dart `String` via `String.fromCharCodes` semantics.
 4. The three strings are joined to form a base string `S`.
 5. `S` is UTF-8 encoded and passed to a hash function (SHA-256) to produce a 32-byte digest used as the AES key.
-6. The constructor concatenates `S` with a salt string (loaded from the object pool, e.g., `"IV_SALT"`), hashes again with SHA-256, and takes the first 16 bytes as the IV.
-7. The AES instance is initialized (mode: **CBC**, padding: **PKCS7**).
+6. The constructor concatenates `S` with a salt string (loaded from the object pool, e.g., `"IV_SALT"`), hashes again with SHA-256, and derives as the IV.
+7. The AES instance is initialized.
 
 Reading the pseudocode, the flow is evident: everything required to reconstruct the key is present in the binary and deterministic.
 
@@ -823,7 +815,7 @@ __int64 __fastcall droid_pass_services_encryption_service_EncryptionService::cto
 ## Sequence of immediate byte constants
 A close look at the constructor’s store sequence shows these immediate constants being written to the growable list:
 
-```assembly
+```asm
 .text:0000000000285714                 MOV             X2, X0
 .text:0000000000285718                 LDR             X1, [X27,#DartObjectPool.Obj_0x1f138]
 .text:000000000028571C                 BL              AllocateArrayStub_540088
@@ -924,7 +916,7 @@ value = Smi_raw >> 1   // remove tag / shift back to real integer
 ### How that maps to the assembly we have
 In the constructor, the code issues immediates such as `0x82`, `0xE4`, `0xBA`, ... and stores them into the list backing memory. Those are **Smi-encoded** representations. When `String.fromCharCodes` later consumes the list, the runtime unboxes each Smi (`>> 1`) to obtain the real character codepoints. That’s why a quick scan may think the constants are non-printable: you must interpret them as **Smi-encoded** values.
 
-```assembly
+```asm
 MOV             X16, #0x82
 STUR            W16, [X0,...]
 MOV             X16, #0xE4
@@ -1019,7 +1011,7 @@ This mechanism doesn’t provide any real cryptographic security. Tagged Smi val
 The constructor splits the 27-element list into three chunks of 9 codepoints each via repeated `sublist()` calls, and converts each into a string using `String.fromCharCodes`. The three substrings are concatenated into the base string:
 
 #### Call #1
-```assembly
+```asm
 MOV   X16, #0x12      ; 0x12 = 18 (this is a Smi for end)
 STR   X16, [X15]      ; end (tagged) pushed
 MOV   X1, X3          ; list
@@ -1032,7 +1024,7 @@ BL    dart_core__GrowableList__sublist_2d6fac
 - Range: `[0, 9)`
 
 #### Call #2
-```assembly
+```asm
 MOV   X16, #0x24      ; 0x24 = 36 (Smi end)
 STR   X16, [X15]
 LDUR  X1, [X29,-0x18] ; list
@@ -1045,7 +1037,7 @@ BL    sublist
 - Range: `[9, 18)`
 
 #### Call #3
-```assembly
+```asm
 LDUR  X1, [X29,-0x18] ; list
 MOV   X2, #0x12       ; start = 0x12 (raw) = 18
 LDR   X4, [pool Obj_0x1f7c0] ; end comes from pool (Smi)
@@ -1063,7 +1055,7 @@ The three contiguous ranges `[0,9)`, `[9,18)`, and `[18,27)` align with the thre
 
 
 ### Construct the encryption key
-```assembly
+```asm
 ; prior lines computed base string S = "Ar]gd_aAA" + "QUperQecr" + "etKey523!"
 .text:00000000002859A4  BL    dart_core__StringBase___interpolate_21db7c
 .text:00000000002859A8  MOV   X1, X0                   ; concated string S
@@ -1106,7 +1098,7 @@ What does this do:
 5. Construct `Key` and set its `bytes` to that digest.
 
 That’s the AES key material that is later passed to the AES constructor:
-```assembly
+```asm
 .text:0000000000285CF0  LDUR  W2, [X1,#0xB]
 ...
 .text:0000000000285CFC  BL    AllocateAESStub_2ad34c
@@ -1121,7 +1113,7 @@ So, **AES key = SHA-256("Ar]gd_aAAQUperQecretKey523!")**
 
 The disassembly sequence below shows how the base string `S` is constructed and concatenated with an additional constant:
 
-```assembly
+```asm
 .text:0000000000285AA0  LDUR  W0, [X1,#7]              ; S = "Ar]gd_aAA" + "QUperQecr" + "etKey523!"
 .text:0000000000285AA4  ADD   X0, X0, X28, LSL#32      ; Smi handling (turn W0 into a full object ref)
 .text:0000000000285AA8  ADD   X16, X27, #0xE,LSL#12
@@ -1162,7 +1154,7 @@ pp.txt
 
 Next, the concatenated string is encoded in UTF-8 and hashed using **SHA-256**:
 
-```assembly
+```asm
 .text:0000000000285AB8  MOV   X2, X0                    ; X0 = S2
 .text:0000000000285ABC  LDR   X1, [X27,#Obj_0x1eb58]    ; Utf8Encoder instance
 .text:0000000000285AC0  LDR   X4, [X27,#Obj_0x1f7c0]    ; converter/sink helper
@@ -1175,7 +1167,7 @@ Next, the concatenated string is encoded in UTF-8 and hashed using **SHA-256**:
 
 The hash digest is then truncated to the first 16 bytes:
 
-```assembly
+```asm
 .text:0000000000285AD8  LDUR  W1, [X0,#7]               ; digest.length (Smi)
 .text:0000000000285ADC  ADD   X1, X1, X28,LSL#32
 .text:0000000000285AE0  LDUR  X0, [X1,#-1]
@@ -1192,7 +1184,7 @@ The hash digest is then truncated to the first 16 bytes:
 
 Finally, the 16-byte sublist is wrapped as an `IV` object and stored in the instance:
 
-```assembly
+```asm
 .text:0000000000285C84  LDUR  X0, [X29,#-8]
 .text:0000000000285C88  BL    AllocateIVStub_2ad358      ; allocate IV()
 .text:0000000000285C8C  MOV   X1, X0                     ; X1 = IV
