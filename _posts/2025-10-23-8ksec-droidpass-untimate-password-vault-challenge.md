@@ -1510,7 +1510,8 @@ In the testing carried out with the sample database above, the decrypted service
 
 # Security assessment & suggested mitigations
 ## Security through obscurity
-The primary weakness in DroidPass is that both key and IV are derived purely from constants embedded in the binary. Despite being compiled to native code, those constants are recoverable through static analysis. The steps used by the constructor are deterministic and independent of user-provided secrets or hardware-backed key storage.
+The principal weakness in DroidPass is that both the encryption key and IV are derived solely from constants embedded in the binary. The developers stored those values as ASCII byte arrays, then performed trivial transformations—splitting into chunks and reversing lists—to make static analysis slightly more awkward. Even though the code is compiled to native, those constants and the constructor’s deterministic steps are recoverable via static analysis. Because the derivation is independent of any user-provided secret or hardware-backed key store, an attacker with the APK can reconstruct the key and IV without executing the app.
+
 
 Simply put: if an attacker can read your APK, they can compute the same AES key and IV and decrypt the database—regardless of whether the app hides logic behind obfuscation or AOT compilation.
 
