@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Reverse Engineering Flare-On 2025 Challenge 8: FlareAuthenticator"
+title: "Flare-On 12 CTF 2025: Challenge 8 - FlareAuthenticator"
 image:
     path: https://lh3.googleusercontent.com/pw/AP1GczMRu8zOSM7tnklQ0i8-Mio2FBtjTiW7lJJoL69yo30J3Z2KpFAy0yc2YPvfLAqpBc30vD_axzLnaQNbeXk0kUWIva-GHyymhFnIDz93d3mC_oONOChOEVMJAatOMNhm8v1ac9y0SsGoKr5aJyMZaFvA=w680-h736-s-no-gm
     alt: Challenge 8 - FLARE Authenticator
