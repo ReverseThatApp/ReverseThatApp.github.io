@@ -112,7 +112,7 @@ Opening `FlareAuthenticator.exe` in IDA and sorting functions by length highligh
 ![Extensive obfuscated functions](https://lh3.googleusercontent.com/pw/AP1GczPOjzuon7DKpWlsNgf_eP77_kMadYWfAJzq3JLbyS06D7mNGm5eB4UzWQIV0wITTII2oXNEcEMFzQ7-hIpQ3N9FqXsI833gzILBJ64JCBzIVxeISHv3th10lwnLbhjuKf1nGPXaE_D4refxx_7KqgpY=w1080-h426-s-no-gm)
 _**Figure: Extensive obfuscated functions**_
 
-## Tanged Control Flow Graph (CFG)
+## Tangled Control Flow Graph (CFG)
 Graph view for functions like `sub_140037160` displays an extraordinarily tangled control flow graph (CFG), indicative of intentional disruption. Efforts to simplify it give way to broader exploration of the binary.
 
 ![sub_140037160 Obfuscated CFG](https://lh3.googleusercontent.com/pw/AP1GczMyqhDHM0NMB3jmGCmgPkvI6LOxAIvIp5uQY4Gv4p2-kytKTfgngMXWKE6rwdgt3gBUFMKqqxqocnpwZAI4zRCnlZSwTaV7E7TvSrUWPU3_poCMka3Qmwgos2n7l7hPn4eCogG0NmSyv5poxU6z0h8n=w870-h736-s-no-gm)
@@ -893,7 +893,7 @@ start C:\x64dbg_snapshot_2025-08-19_19-40\release\x64\x64dbg.exe
 
 Attachment to `FlareAuthenticator.exe` sets a breakpoint at the comparison (ASLR-adjusted). Entering 25 digits and confirming hits it. Sync activates via `!sync`.
 
-![x64dbg and IDA are in sync](https://lh3.googleusercontent.com/pw/AP1GczPp_adsQojK2LdQiVsqNml2GM1Bob-TbKP3Uh8Dxm1BSUkcHlRe6cmxgMJrMnmVzVPBfUykbygLY7HkRKhyEostRiLlO_hol1v-TXEWwpuG-Cd94C1zj9TjRsue5ObFDDJ9Zc8kM1pCvVH4q8WIa6kn=w1856-h654-s-no-gm)
+![x64dbg and IDA are in sync](https://lh3.googleusercontent.com/pw/AP1GczO_z5LFX_-PEkQKLHHmlvKcSRPCJtDOH1ppB4p42MeReKO5uerx2a-9ii9hTTXmXzMhlRx5BKxvdrNZMc7uXmgV2skJbSq3cnTPihFHGs-10tMftOeq48V7_kRtRilvX7JpwLi352tsgnQFk7yNmAgB=w1248-h654-s-no-gm)
 _**Figure: x64dbg and IDA are in sync**_
 
 A hardware breakpoint is placed on access to `[rax+78h]` after setting a software breakpoint at the comparison site. Entering 25 arbitrary digits and pressing "OK" triggers the comparison. Following `[rax+78h]` in the memory dump and setting a hardware access breakpoint (`Qword`) captures write operations.
@@ -931,7 +931,7 @@ Sync places it in `sub_140012E50`.
 .text:0000000140016B00                 mov     [rax+78h], rcx
 ```
 
-Backtracing `var_C78` reveals it is the result of multiplying two return values from `sub_140081760`:
+Backtracing `var_C78` reveals it is the result of multiplying two return values from `sub_140081760`.
 
 ## Tracing xrefs to **var_C78**
 XREFs reveal write locations.
