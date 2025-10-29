@@ -7,8 +7,8 @@ image:
 tags: [flareon, flareon12, flareon-2025, ctf, QT, obfuscated, ret-sync, WinDbg, TTD, IDA]
 categories: [CTF, Flareon 2025]
 ---
-
-CTF challenges like those in Flare-On provide excellent opportunities to refine reverse engineering techniques on obfuscated binaries. Challenge 8 from Flare-On 2025, "FlareAuthenticator" involves recovering a 25-digit password from a legacy QT-based authenticator protected by multiple obfuscation layers. The analysis begins with initial exploration and progresses through static and dynamic techniques, leveraging tools such as IDA, x64dbg, WinDbg with Time Travel Debugging (TTD), and the Z3 solver. Key concepts are explained for accessibility while maintaining depth for intermediate practitioners.
+# TL;DR
+CTF challenges like those in Flare-On provide excellent opportunities to refine reverse engineering techniques on obfuscated binaries. Challenge 8 from Flare-On 2025, "FlareAuthenticator" involves recovering a 25-digit password from a legacy QT-based authenticator protected by multiple obfuscation layers. The analysis begins with initial exploration and progresses through static and dynamic techniques, leveraging tools such as IDA, x64dbg, WinDbg with Time Travel Debugging (TTD), and the Z3 solver. When obfuscation overwhelms, **don’t fight the junk — follow the data**. Start from UI, trace inward, treat opaque functions as oracles, and let **TTD + Z3** cut through the noise.
 
 # Challenge description
 > 8 - FlareAuthenticator
@@ -104,7 +104,7 @@ Count 209074629: 8
 Count 209037462: 9
 ```
 
-The similarity in counts across inputs renders Pin ineffective for this side-channel strategy. Attention then shifts to static binary analysis.
+The nearly identical instruction counts across all digit inputs eliminate any exploitable side-channel, rendering the Pin-based approach ineffective. With this path closed, the analysis shifts to **static binary examination** in IDA.
 
 # Static Analysis
 Opening `FlareAuthenticator.exe` in IDA and sorting functions by length highlights several complex ones beyond `main`. Closer inspection uncovers extensive obfuscation.
@@ -125,107 +125,107 @@ _**Figure: sub_140035EF60 Obfuscated CFG**_
 Large stack frames allocate via `sub rsp, rax` (with `eax` at `0x7278`), followed by repeated address loads and mirrored stores into local slots. This aliasing confounds decompilers and masks actual data movement through added indirection.
 
 ```assembly
-.text:000000014003716C                 mov     eax, 7278h
-.text:0000000140037171                 call    __alloca_probe
-.text:0000000140037176                 sub     rsp, rax
-.text:0000000140037179                 lea     rbp, [rsp+80h]
-.text:0000000140037181                 mov     [rbp+7230h+var_40], 0FFFFFFFFFFFFFFFEh
-.text:000000014003718C                 mov     [rbp+7230h+var_5118], rcx
-.text:0000000140037193                 lea     rax, [rbp+7230h+var_7C8]
-.text:000000014003719A                 mov     [rbp+7230h+var_4EB0], rax
-.text:00000001400371A1                 mov     [rbp+7230h+var_1020], rax
-.text:00000001400371A8                 lea     rax, [rbp+7230h+var_5E8]
-.text:00000001400371AF                 mov     [rbp+7230h+var_4DE8], rax
-.text:00000001400371B6                 mov     [rbp+7230h+var_1040], rax
-.text:00000001400371BD                 lea     r10, [rbp+7230h+var_808]
-.text:00000001400371C4                 mov     [rbp+7230h+var_4C88], r10
-.text:00000001400371CB                 mov     [rbp+7230h+var_1028], r10
-.text:00000001400371D2                 lea     rcx, [rbp+7230h+var_3B0]
-.text:00000001400371D9                 mov     [rbp+7230h+var_4E90], rcx
-.text:00000001400371E0                 mov     [rbp+7230h+var_1038], rcx
-.text:00000001400371E7                 lea     rax, [rbp+7230h+var_BC8]
-.text:00000001400371EE                 mov     [rbp+7230h+var_4E68], rax
-.text:00000001400371F5                 mov     [rbp+7230h+var_1018], rax
-.text:00000001400371FC                 lea     r11, [rbp+7230h+var_170]
-.text:0000000140037203                 mov     [rbp+7230h+var_4F80], r11
-.text:000000014003720A                 mov     [rbp+7230h+var_1050], r11
-.text:0000000140037211                 lea     rax, [rbp+7230h+var_528]
-.text:0000000140037218                 mov     [rbp+7230h+var_4B60], rax
-.text:000000014003721F                 mov     [rbp+7230h+var_1070], rax
-.text:0000000140037226                 lea     rax, [rbp+7230h+var_DB0]
-.text:000000014003722D                 mov     [rbp+7230h+var_4B78], rax
-.text:0000000140037234                 mov     [rbp+7230h+var_1058], rax
-.text:000000014003723B                 lea     rax, [rbp+7230h+var_938]
-.text:0000000140037242                 mov     [rbp+7230h+var_4F18], rax
-.text:0000000140037249                 mov     [rbp+7230h+var_1080], rax
-.text:0000000140037250                 lea     rax, [rbp+7230h+var_F70]
-.text:0000000140037257                 mov     [rbp+7230h+var_4B10], rax
-.text:000000014003725E                 mov     [rbp+7230h+var_10A0], rax
-.text:0000000140037265                 lea     rdx, [rbp+7230h+var_A18]
-.text:000000014003726C                 mov     [rbp+7230h+var_50D8], rdx
-.text:0000000140037273                 mov     [rbp+7230h+var_1088], rdx
-.text:000000014003727A                 lea     rdx, [rbp+7230h+var_E98]
-.text:0000000140037281                 mov     [rbp+7230h+var_5080], rdx
-.text:0000000140037288                 mov     [rbp+7230h+var_10B0], rdx
-.text:000000014003728F                 lea     r8, [rbp+7230h+var_280]
-.text:0000000140037296                 mov     [rbp+7230h+var_4D68], r8
-.text:000000014003729D                 mov     [rbp+7230h+var_10D0], r8
-.text:00000001400372A4                 lea     rsi, [rbp+7230h+var_EB0]
-.text:00000001400372AB                 mov     [rbp+7230h+var_10E0], rsi
-.text:00000001400372B2                 lea     r8, [rbp+7230h+var_258]
-.text:00000001400372B9                 mov     [rbp+7230h+var_4D40], r8
-.text:00000001400372C0                 mov     [rbp+7230h+var_1100], r8
-.text:00000001400372C7                 mov     [rbp+7230h+var_10E8], rcx
-.text:00000001400372CE                 mov     [rbp+7230h+var_10F8], rdx
-.text:00000001400372D5                 lea     r8, [rbp+7230h+var_2C8]
-.text:00000001400372DC                 mov     [rbp+7230h+var_4F68], r8
-.text:00000001400372E3                 mov     [rbp+7230h+var_10D8], r8
-.text:00000001400372EA                 lea     rcx, [rbp+7230h+var_FE0]
-.text:00000001400372F1                 mov     [rbp+7230h+var_1110], rcx
+.text:14003716C   mov     eax, 7278h
+.text:140037171   call    __alloca_probe
+.text:140037176   sub     rsp, rax
+.text:140037179   lea     rbp, [rsp+80h]
+.text:140037181   mov     [rbp+7230h+var_40], 0FFFFFFFFFFFFFFFEh
+.text:14003718C   mov     [rbp+7230h+var_5118], rcx
+.text:140037193   lea     rax, [rbp+7230h+var_7C8]
+.text:14003719A   mov     [rbp+7230h+var_4EB0], rax
+.text:1400371A1   mov     [rbp+7230h+var_1020], rax
+.text:1400371A8   lea     rax, [rbp+7230h+var_5E8]
+.text:1400371AF   mov     [rbp+7230h+var_4DE8], rax
+.text:1400371B6   mov     [rbp+7230h+var_1040], rax
+.text:1400371BD   lea     r10, [rbp+7230h+var_808]
+.text:1400371C4   mov     [rbp+7230h+var_4C88], r10
+.text:1400371CB   mov     [rbp+7230h+var_1028], r10
+.text:1400371D2   lea     rcx, [rbp+7230h+var_3B0]
+.text:1400371D9   mov     [rbp+7230h+var_4E90], rcx
+.text:1400371E0   mov     [rbp+7230h+var_1038], rcx
+.text:1400371E7   lea     rax, [rbp+7230h+var_BC8]
+.text:1400371EE   mov     [rbp+7230h+var_4E68], rax
+.text:1400371F5   mov     [rbp+7230h+var_1018], rax
+.text:1400371FC   lea     r11, [rbp+7230h+var_170]
+.text:140037203   mov     [rbp+7230h+var_4F80], r11
+.text:14003720A   mov     [rbp+7230h+var_1050], r11
+.text:140037211   lea     rax, [rbp+7230h+var_528]
+.text:140037218   mov     [rbp+7230h+var_4B60], rax
+.text:14003721F   mov     [rbp+7230h+var_1070], rax
+.text:140037226   lea     rax, [rbp+7230h+var_DB0]
+.text:14003722D   mov     [rbp+7230h+var_4B78], rax
+.text:140037234   mov     [rbp+7230h+var_1058], rax
+.text:14003723B   lea     rax, [rbp+7230h+var_938]
+.text:140037242   mov     [rbp+7230h+var_4F18], rax
+.text:140037249   mov     [rbp+7230h+var_1080], rax
+.text:140037250   lea     rax, [rbp+7230h+var_F70]
+.text:140037257   mov     [rbp+7230h+var_4B10], rax
+.text:14003725E   mov     [rbp+7230h+var_10A0], rax
+.text:140037265   lea     rdx, [rbp+7230h+var_A18]
+.text:14003726C   mov     [rbp+7230h+var_50D8], rdx
+.text:140037273   mov     [rbp+7230h+var_1088], rdx
+.text:14003727A   lea     rdx, [rbp+7230h+var_E98]
+.text:140037281   mov     [rbp+7230h+var_5080], rdx
+.text:140037288   mov     [rbp+7230h+var_10B0], rdx
+.text:14003728F   lea     r8, [rbp+7230h+var_280]
+.text:140037296   mov     [rbp+7230h+var_4D68], r8
+.text:14003729D   mov     [rbp+7230h+var_10D0], r8
+.text:1400372A4   lea     rsi, [rbp+7230h+var_EB0]
+.text:1400372AB   mov     [rbp+7230h+var_10E0], rsi
+.text:1400372B2   lea     r8, [rbp+7230h+var_258]
+.text:1400372B9   mov     [rbp+7230h+var_4D40], r8
+.text:1400372C0   mov     [rbp+7230h+var_1100], r8
+.text:1400372C7   mov     [rbp+7230h+var_10E8], rcx
+.text:1400372CE   mov     [rbp+7230h+var_10F8], rdx
+.text:1400372D5   lea     r8, [rbp+7230h+var_2C8]
+.text:1400372DC   mov     [rbp+7230h+var_4F68], r8
+.text:1400372E3   mov     [rbp+7230h+var_10D8], r8
+.text:1400372EA   lea     rcx, [rbp+7230h+var_FE0]
+.text:1400372F1   mov     [rbp+7230h+var_1110], rcx
 ...
 ```
 
-Though initially daunting, this layer contributes minimally to core logic and is set aside.
+Although this obfuscation appears intimidating at first, it adds little to the actual program logic and can be safely set aside for later analysis.
 
 ## Indirect function-pointer obfuscation
 Many function calls are resolved at runtime: a base address is loaded from a global offset table (`cs:off_1400B8440`), then an immediate is added before invocation. This pattern effectively hides callees from static cross-references.
 
 ```assembly
-.text:000000014003A2A8                 mov     rax, cs:off_1400B8440
-.text:000000014003A2AF                 mov     rcx, 0DC4D1CFA717B15E1h
-.text:000000014003A2B9                 add     rax, rcx
-.text:000000014003A2BC                 lea     rcx, [rbp+7230h+var_3E60]
-.text:000000014003A2C3                 call    rax             
-.text:000000014003A2C5                 mov     rax, [rax]
-.text:000000014003A2C8                 mov     qword ptr [rax+20h], 146Bh
-.text:000000014003A2D0                 mov     [rbp+7230h+var_738], 146Bh
-.text:000000014003A2DB                 mov     rax, cs:off_1400B1EE0
-.text:000000014003A2E2                 mov     rcx, 1E6F4B38BD1901B5h
-.text:000000014003A2EC                 add     rax, rcx
-.text:000000014003A2EF                 lea     rcx, [rbp+7230h+var_3FB0]
-.text:000000014003A2F6                 call    rax             
-.text:000000014003A2F8                 mov     rcx, [rax]
-.text:000000014003A2FB                 mov     rax, cs:off_1400ADDD0
-.text:000000014003A302                 mov     rdx, 0CD5CA65684621C9Ah
-.text:000000014003A30C                 add     rax, rdx
-.text:000000014003A30F                 call    rax             
-.text:000000014003A311                 mov     rax, [rax]
-.text:000000014003A314                 add     rax, 10h
-.text:000000014003A318                 mov     [rbp+7230h+var_370], rax
-.text:000000014003A31F                 mov     rax, cs:off_1400A4428
-.text:000000014003A326                 mov     rcx, 0DD4DBD41A35BB9FCh
-.text:000000014003A330                 add     rax, rcx
-.text:000000014003A333                 lea     rcx, [rbp+7230h+var_4910]
-.text:000000014003A33A                 call    rax             
-.text:000000014003A33C                 mov     rcx, [rax]
-.text:000000014003A33F                 mov     rax, cs:off_1400A6B08
-.text:000000014003A346                 mov     rdx, 0AA18916841B77C41h
-.text:000000014003A350                 add     rax, rdx
-.text:000000014003A353                 call    rax             
-.text:000000014003A355                 mov     rcx, [rax]
-.text:000000014003A358                 mov     rax, cs:off_1400AEE38
-.text:000000014003A35F                 mov     rdx, 4F7DF4F0D44FD46Eh
-.text:000000014003A369                 add     rax, rdx
+.text:14003A2A8   mov     rax, cs:off_1400B8440
+.text:14003A2AF   mov     rcx, 0DC4D1CFA717B15E1h
+.text:14003A2B9   add     rax, rcx
+.text:14003A2BC   lea     rcx, [rbp+7230h+var_3E60]
+.text:14003A2C3   call    rax             
+.text:14003A2C5   mov     rax, [rax]
+.text:14003A2C8   mov     qword ptr [rax+20h], 146Bh
+.text:14003A2D0   mov     [rbp+7230h+var_738], 146Bh
+.text:14003A2DB   mov     rax, cs:off_1400B1EE0
+.text:14003A2E2   mov     rcx, 1E6F4B38BD1901B5h
+.text:14003A2EC   add     rax, rcx
+.text:14003A2EF   lea     rcx, [rbp+7230h+var_3FB0]
+.text:14003A2F6   call    rax             
+.text:14003A2F8   mov     rcx, [rax]
+.text:14003A2FB   mov     rax, cs:off_1400ADDD0
+.text:14003A302   mov     rdx, 0CD5CA65684621C9Ah
+.text:14003A30C   add     rax, rdx
+.text:14003A30F   call    rax             
+.text:14003A311   mov     rax, [rax]
+.text:14003A314   add     rax, 10h
+.text:14003A318   mov     [rbp+7230h+var_370], rax
+.text:14003A31F   mov     rax, cs:off_1400A4428
+.text:14003A326   mov     rcx, 0DD4DBD41A35BB9FCh
+.text:14003A330   add     rax, rcx
+.text:14003A333   lea     rcx, [rbp+7230h+var_4910]
+.text:14003A33A   call    rax             
+.text:14003A33C   mov     rcx, [rax]
+.text:14003A33F   mov     rax, cs:off_1400A6B08
+.text:14003A346   mov     rdx, 0AA18916841B77C41h
+.text:14003A350   add     rax, rdx
+.text:14003A353   call    rax             
+.text:14003A355   mov     rcx, [rax]
+.text:14003A358   mov     rax, cs:off_1400AEE38
+.text:14003A35F   mov     rdx, 4F7DF4F0D44FD46Eh
+.text:14003A369   add     rax, rdx
 ...
 ```
 
@@ -432,82 +432,82 @@ if __name__ == "__main__":
     main()
 ```
 
-Post-execution, comments display callee names, and XREFs enable navigation.
+After running the script, function comments now display the resolved callee names, and restored cross-references (XREFs) enable smooth navigation throughout the binary.
 
 ```assembly
-.text:000000014003A2A8                 mov     rax, cs:off_1400B8440
-.text:000000014003A2AF                 mov     rcx, 0DC4D1CFA717B15E1h
-.text:000000014003A2B9                 add     rax, rcx
-.text:000000014003A2BC                 lea     rcx, [rbp+7230h+var_3E60]
-.text:000000014003A2C3                 call    rax             ; sub_14005CB50
-.text:000000014003A2C5                 mov     rax, [rax]
-.text:000000014003A2C8                 mov     qword ptr [rax+20h], 146Bh
-.text:000000014003A2D0                 mov     [rbp+7230h+var_738], 146Bh
-.text:000000014003A2DB                 mov     rax, cs:off_1400B1EE0
-.text:000000014003A2E2                 mov     rcx, 1E6F4B38BD1901B5h
-.text:000000014003A2EC                 add     rax, rcx
-.text:000000014003A2EF                 lea     rcx, [rbp+7230h+var_3FB0]
-.text:000000014003A2F6                 call    rax             ; sub_14001E7B0
-.text:000000014003A2F8                 mov     rcx, [rax]
-.text:000000014003A2FB                 mov     rax, cs:off_1400ADDD0
-.text:000000014003A302                 mov     rdx, 0CD5CA65684621C9Ah
-.text:000000014003A30C                 add     rax, rdx
-.text:000000014003A30F                 call    rax             ; sub_140086AB0
-.text:000000014003A311                 mov     rax, [rax]
-.text:000000014003A314                 add     rax, 10h
-.text:000000014003A318                 mov     [rbp+7230h+var_370], rax
-.text:000000014003A31F                 mov     rax, cs:off_1400A4428
-.text:000000014003A326                 mov     rcx, 0DD4DBD41A35BB9FCh
-.text:000000014003A330                 add     rax, rcx
-.text:000000014003A333                 lea     rcx, [rbp+7230h+var_4910]
-.text:000000014003A33A                 call    rax             ; sub_1400016E0
-.text:000000014003A33C                 mov     rcx, [rax]
-.text:000000014003A33F                 mov     rax, cs:off_1400A6B08
-.text:000000014003A346                 mov     rdx, 0AA18916841B77C41h
-.text:000000014003A350                 add     rax, rdx
-.text:000000014003A353                 call    rax             ; sub_14000D030
-.text:000000014003A355                 mov     rcx, [rax]
-.text:000000014003A358                 mov     rax, cs:off_1400AEE38
-.text:000000014003A35F                 mov     rdx, 4F7DF4F0D44FD46Eh
-.text:000000014003A369                 add     rax, rdx
-.text:000000014003A36C                 call    rax             ; sub_14007C620
+.text:14003A2A8   mov     rax, cs:off_1400B8440
+.text:14003A2AF   mov     rcx, 0DC4D1CFA717B15E1h
+.text:14003A2B9   add     rax, rcx
+.text:14003A2BC   lea     rcx, [rbp+7230h+var_3E60]
+.text:14003A2C3   call    rax             ; sub_14005CB50
+.text:14003A2C5   mov     rax, [rax]
+.text:14003A2C8   mov     qword ptr [rax+20h], 146Bh
+.text:14003A2D0   mov     [rbp+7230h+var_738], 146Bh
+.text:14003A2DB   mov     rax, cs:off_1400B1EE0
+.text:14003A2E2   mov     rcx, 1E6F4B38BD1901B5h
+.text:14003A2EC   add     rax, rcx
+.text:14003A2EF   lea     rcx, [rbp+7230h+var_3FB0]
+.text:14003A2F6   call    rax             ; sub_14001E7B0
+.text:14003A2F8   mov     rcx, [rax]
+.text:14003A2FB   mov     rax, cs:off_1400ADDD0
+.text:14003A302   mov     rdx, 0CD5CA65684621C9Ah
+.text:14003A30C   add     rax, rdx
+.text:14003A30F   call    rax             ; sub_140086AB0
+.text:14003A311   mov     rax, [rax]
+.text:14003A314   add     rax, 10h
+.text:14003A318   mov     [rbp+7230h+var_370], rax
+.text:14003A31F   mov     rax, cs:off_1400A4428
+.text:14003A326   mov     rcx, 0DD4DBD41A35BB9FCh
+.text:14003A330   add     rax, rcx
+.text:14003A333   lea     rcx, [rbp+7230h+var_4910]
+.text:14003A33A   call    rax             ; sub_1400016E0
+.text:14003A33C   mov     rcx, [rax]
+.text:14003A33F   mov     rax, cs:off_1400A6B08
+.text:14003A346   mov     rdx, 0AA18916841B77C41h
+.text:14003A350   add     rax, rdx
+.text:14003A353   call    rax             ; sub_14000D030
+.text:14003A355   mov     rcx, [rax]
+.text:14003A358   mov     rax, cs:off_1400AEE38
+.text:14003A35F   mov     rdx, 4F7DF4F0D44FD46Eh
+.text:14003A369   add     rax, rdx
+.text:14003A36C   call    rax             ; sub_14007C620
 ...
 ```
 
 For example, a resolved call points to `sub_14005CB50`, a simple accessor returning `rcx + 8`. Restored XREFs now propagate throughout the binary.
 
 ```assembly
-.text:000000014005CB50 ; =============== S U B R O U T I N E =======================================
-.text:000000014005CB50
-.text:000000014005CB50
-.text:000000014005CB50 sub_14005CB50   proc near               ; CODE XREF: sub_140037160+3163↑P
-.text:000000014005CB50                 mov     rax, rcx
-.text:000000014005CB53                 add     rax, 8
-.text:000000014005CB57                 retn
-.text:000000014005CB57 sub_14005CB50   endp
+.text:14005CB50 ; =============== S U B R O U T I N E =======================================
+.text:14005CB50
+.text:14005CB50
+.text:14005CB50 sub_14005CB50   proc near               ; CODE XREF: sub_140037160+3163↑P
+.text:14005CB50   mov     rax, rcx
+.text:14005CB53   add     rax, 8
+.text:14005CB57   retn
+.text:14005CB57 sub_14005CB50   endp
 ```
 
 ## Control-flow mangling
-Computed jumps blend memory indirection, bitwise operations, and arithmetic identities to hide destinations, fracturing IDA's CFG and decompiler output.
+Computed jumps obscure their destinations by combining memory indirection, complex bitwise operations, and arithmetic identities—techniques that deliberately fracture IDA’s control flow graph (CFG) and produce incomprehensible decompiler output.
 
 ```assembly
-.text:000000014003A44C                 mov     rax, cs:off_1400AA918
-.text:000000014003A453                 mov     rcx, 0D9C148F7B07D346Ch
-.text:000000014003A45D                 mov     rcx, [rax+rcx]
-.text:000000014003A461                 mov     r8, 0F493E10412D3F4FBh
-.text:000000014003A46B                 mov     rax, rcx
-.text:000000014003A46E                 or      rax, r8
-.text:000000014003A471                 mov     r9, rcx
-.text:000000014003A474                 sub     r9, rax
-.text:000000014003A477                 mov     rdx, 0E927C20825A7E9F6h
-.text:000000014003A481                 lea     rdx, [rdx+r9*2]
-.text:000000014003A485                 and     rcx, r8
-.text:000000014003A488                 sub     rax, rcx
-.text:000000014003A48B                 mov     rcx, rax
-.text:000000014003A48E                 or      rcx, rdx
-.text:000000014003A491                 and     rax, rdx
-.text:000000014003A494                 add     rax, rcx
-.text:000000014003A497                 jmp     rax
+.text:14003A44C   mov     rax, cs:off_1400AA918
+.text:14003A453   mov     rcx, 0D9C148F7B07D346Ch
+.text:14003A45D   mov     rcx, [rax+rcx]
+.text:14003A461   mov     r8, 0F493E10412D3F4FBh
+.text:14003A46B   mov     rax, rcx
+.text:14003A46E   or      rax, r8
+.text:14003A471   mov     r9, rcx
+.text:14003A474   sub     r9, rax
+.text:14003A477   mov     rdx, 0E927C20825A7E9F6h
+.text:14003A481   lea     rdx, [rdx+r9*2]
+.text:14003A485   and     rcx, r8
+.text:14003A488   sub     rax, rcx
+.text:14003A48B   mov     rcx, rax
+.text:14003A48E   or      rcx, rdx
+.text:14003A491   and     rax, rdx
+.text:14003A494   add     rax, rcx
+.text:14003A497   jmp     rax
 ```
 
 Decompiling yields nonsensical expressions involving modular arithmetic and identity operations—classic opaque predicates designed to confuse tools while preserving semantics.
@@ -526,30 +526,30 @@ Decompiling yields nonsensical expressions involving modular arithmetic and iden
 Unconditional computed jumps (`jmp rax`) frequently land in the middle of subsequent instructions, causing IDA’s linear sweep to misinterpret code bytes as data. Garbage bytes are strategically inserted to exacerbate this effect.
 
 ```c
-.text:000000014003A6A7                 add     rax, rcx
-.text:000000014003A6AA                 jmp     rax
-.text:000000014003A6AA ; ---------------------------------------------------------------------------
-.text:000000014003A6AC                 dd 8B4800EBh
-.text:000000014003A6B0                 dq 1BB9480007736B05h, 4844FC86EAE3452Dh, 20B885894808048Bh
-.text:000000014003A6C8                 dq 6ABEF058B480000h, 0C1B92C9DF7B94800h, 8D48C801489B14EEh
-.text:000000014003A6E0                 dq 48D0FF00002CE08Dh, 6911F058B48088Bh, 0DE8D950730BA4800h
-.text:000000014003A6F8                 dq 0D0FFD00148FD769Fh, 41E058B48088B48h, 98FECFA1BA480008h
-.text:000000014003A710                 dq 0FFD00148D74B3204h, 9D058B48088B48D0h, 0ACD59FBA48000771h
-.text:000000014003A728                 dq 0D00148E7A955E2ACh, 2118958B48D0FFh, 0B8858B48C1894800h
-.text:000000014003A740                 dq 8948098B48000020h, 0BC5C7612DDB94811h, 8948C801480C20C7h
-.text:000000014003A758                 dq 58B48000020C085h, 0B587B9480006A29Ch, 148D3A5267D4CC8h
-.text:000000014003A770                 dq 2B608D8D48C8h, 58B48088B48D0FFh, 0C610BA4800065D74h
-.text:000000014003A788                 dq 14833B864839865h, 8B48C18948D0FFD0h, 98B48000020C085h
-.text:000000014003A7A0                 dq 20E88D8948098B48h, 50090010B9480000h, 48C82148F0D0D200h
-.text:000000014003A7B8                 dq 8B48000020C88589h, 7BB9480007348B05h, 481D09A93B5D2651h
-.text:000000014003A7D0                 dq 0FF00000020B9C801h, 20C88D8B4CD0h, 8948C88948C18948h
-.text:000000014003A7E8                 dq 4BB848000020D085h, 490C2225DEA7625Eh, 6AF8858B48C109h
-.text:000000014003A800                 dq 5EF2D11C46BA4800h, 694CD131490E42DAh, 68B848252A29BAC0h
-.text:000000014003A818                 dq 490E160CAD5A82F6h, 651FDD6DBA48C101h, 0D8958948EA898579h
-.text:000000014003A830                 dq 0F748C0894C000020h, 0D8958B48D08948E2h, 481EE8C148000020h
-.text:000000014003A848                 dq 294945DB5247C069h, 0F122676AB6B848C0h, 894CC1094969D157h
-.text:000000014003A860                 dq 4DC5CF96B10D48C0h, 948D4FC22949C289h, 0E081418B9F2D6212h
-.text:000000014003A878                 dq 49C0294C45CF96B1h, 0D0214CD0094DC089h, 20E0858948C0014Ch
+.text:14003A6A7   add     rax, rcx
+.text:14003A6AA   jmp     rax
+.text:14003A6AA ; ---------------------------------------------------------------------------
+.text:14003A6AC   dd 8B4800EBh
+.text:14003A6B0   dq 1BB9480007736B05h, 4844FC86EAE3452Dh, 20B885894808048Bh
+.text:14003A6C8   dq 6ABEF058B480000h, 0C1B92C9DF7B94800h, 8D48C801489B14EEh
+.text:14003A6E0   dq 48D0FF00002CE08Dh, 6911F058B48088Bh, 0DE8D950730BA4800h
+.text:14003A6F8   dq 0D0FFD00148FD769Fh, 41E058B48088B48h, 98FECFA1BA480008h
+.text:14003A710   dq 0FFD00148D74B3204h, 9D058B48088B48D0h, 0ACD59FBA48000771h
+.text:14003A728   dq 0D00148E7A955E2ACh, 2118958B48D0FFh, 0B8858B48C1894800h
+.text:14003A740   dq 8948098B48000020h, 0BC5C7612DDB94811h, 8948C801480C20C7h
+.text:14003A758   dq 58B48000020C085h, 0B587B9480006A29Ch, 148D3A5267D4CC8h
+.text:14003A770   dq 2B608D8D48C8h, 58B48088B48D0FFh, 0C610BA4800065D74h
+.text:14003A788   dq 14833B864839865h, 8B48C18948D0FFD0h, 98B48000020C085h
+.text:14003A7A0   dq 20E88D8948098B48h, 50090010B9480000h, 48C82148F0D0D200h
+.text:14003A7B8   dq 8B48000020C88589h, 7BB9480007348B05h, 481D09A93B5D2651h
+.text:14003A7D0   dq 0FF00000020B9C801h, 20C88D8B4CD0h, 8948C88948C18948h
+.text:14003A7E8   dq 4BB848000020D085h, 490C2225DEA7625Eh, 6AF8858B48C109h
+.text:14003A800   dq 5EF2D11C46BA4800h, 694CD131490E42DAh, 68B848252A29BAC0h
+.text:14003A818   dq 490E160CAD5A82F6h, 651FDD6DBA48C101h, 0D8958948EA898579h
+.text:14003A830   dq 0F748C0894C000020h, 0D8958B48D08948E2h, 481EE8C148000020h
+.text:14003A848   dq 294945DB5247C069h, 0F122676AB6B848C0h, 894CC1094969D157h
+.text:14003A860   dq 4DC5CF96B10D48C0h, 948D4FC22949C289h, 0E081418B9F2D6212h
+.text:14003A878   dq 49C0294C45CF96B1h, 0D0214CD0094DC089h, 20E0858948C0014Ch
 ```
 
 ![Anti-disassembly](https://lh3.googleusercontent.com/pw/AP1GczN4j21Mz5-d0ZyBaNezqnCDu0N2RfTyyjluNbwLowxoYjt8vmHt1Sidqc52Twt7-nF4R-vnLF2x-SrZl8xEBvn3uekyt0WosNkKFc7Bc_HB1WfxU3od2Ywe7JAWd9pbVRcD7EyYiYvv11w5jp8cK29k=w1212-h622-s-no-gm)
@@ -558,29 +558,29 @@ _**Figure: Anti-disassembly**_
 Manually selecting these regions and pressing 'C' forces IDA to reinterpret them as code, revealing hidden logic. 
 
 ```assembly
-.text:000000014003A6A7                 add     rax, rcx
-.text:000000014003A6AA                 jmp     rax
-.text:000000014003A6AC ; ---------------------------------------------------------------------------
-.text:000000014003A6AC                 jmp     short $+2
-.text:000000014003A6AE ; ---------------------------------------------------------------------------
-.text:000000014003A6AE
-.text:000000014003A6AE loc_14003A6AE:                          ; CODE XREF: sub_140037160+354C↑j
-.text:000000014003A6AE                 mov     rax, cs:off_1400B1A20
-.text:000000014003A6B5                 mov     rcx, 44FC86EAE3452D1Bh
-.text:000000014003A6BF                 mov     rax, [rax+rcx]
-.text:000000014003A6C3                 mov     [rbp+7230h+var_5178], rax
-.text:000000014003A6CA                 mov     rax, cs:off_1400A52C0
-.text:000000014003A6D1                 mov     rcx, 9B14EEC1B92C9DF7h
-.text:000000014003A6DB                 add     rax, rcx
-.text:000000014003A6DE                 lea     rcx, [rbp+7230h+var_4550]
-.text:000000014003A6E5                 call    rax
-.text:000000014003A6E7                 mov     rcx, [rax]
-.text:000000014003A6EA                 mov     rax, cs:off_1400A3810
-.text:000000014003A6F1                 mov     rdx, 0FD769FDE8D950730h
-.text:000000014003A6FB                 add     rax, rdx
-.text:000000014003A6FE                 call    rax
-.text:000000014003A700                 mov     rcx, [rax]
-.text:000000014003A703                 mov     rax, cs:off_1400BAB28
+.text:14003A6A7   add     rax, rcx
+.text:14003A6AA   jmp     rax
+.text:14003A6AC ; ---------------------------------------------------------------------------
+.text:14003A6AC                 jmp     short $+2
+.text:14003A6AE ; ---------------------------------------------------------------------------
+.text:14003A6AE
+.text:14003A6AE loc_14003A6AE:                          ; CODE XREF: sub_140037160+354C↑j
+.text:14003A6AE   mov     rax, cs:off_1400B1A20
+.text:14003A6B5   mov     rcx, 44FC86EAE3452D1Bh
+.text:14003A6BF   mov     rax, [rax+rcx]
+.text:14003A6C3   mov     [rbp+7230h+var_5178], rax
+.text:14003A6CA   mov     rax, cs:off_1400A52C0
+.text:14003A6D1   mov     rcx, 9B14EEC1B92C9DF7h
+.text:14003A6DB   add     rax, rcx
+.text:14003A6DE   lea     rcx, [rbp+7230h+var_4550]
+.text:14003A6E5   call    rax
+.text:14003A6E7   mov     rcx, [rax]
+.text:14003A6EA   mov     rax, cs:off_1400A3810
+.text:14003A6F1   mov     rdx, 0FD769FDE8D950730h
+.text:14003A6FB   add     rax, rdx
+.text:14003A6FE   call    rax
+.text:14003A700   mov     rcx, [rax]
+.text:14003A703   mov     rax, cs:off_1400BAB28
 ```
 However, with hundreds of such instances, automation is essential. A Python script scans for `jmp rax` patterns followed by non-code bytes, patches them with `jmp short $+2` (a two-byte no-op jump), and reconnects the CFG.
 
@@ -749,126 +749,126 @@ Post-patching, 656 locations are corrected, dramatically improving graph coheren
 ![Patched jmp rax CFG](https://lh3.googleusercontent.com/pw/AP1GczPApBX6Dv5kbl5wsUZDpGqQPMoTJNQ5W6HMQ0zmIqp-mhIjfpa27o7AqHdsuuSznPD96rPd_IzPp3Yh2SLQf75mKTaekn1YPL2_asA70FmdNsgbdkyvzDKI-enHexWn7XjmZudgF_EU6UrA_9jdffG8=w466-h622-s-no-gm)
 _**Figure: Patched jmp rax CFG**_
 
-The binary now supports focused tracing of message origins.
+With the XREFs restored and the control flow graph reconnected, the binary becomes far more navigable, enabling precise tracing from the visible `QMessageBox` alerts back to their root causes. Given the intensity of the obfuscation, the strategy avoids exhaustive deobfuscation of every junk block and instead adopts a targeted, bottom-up approach: start from the observable outcome—the "Wrong password" dialog—and methodically trace backward through the call chain to uncover the validation logic, rather than attempting a full top-down reconstruction of the flattened control flow.
 
 ## Trace `QMessageBox` Calls
 Validation feedback arrives via QT’s `QMessageBox`. Searching for `information` and `warning` in the strings window, then demangling names, locates the imported thunks. Demangling via `Options > Demangled names > Names` clarifies signatures.
 
 ```assembly
-.text:000000014008DDB0 public: static enum QMessageBox::StandardButton QMessageBox::information(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) proc near
-.text:000000014008DDB0                 jmp     cs:QMessageBox::information(QWidget *,QString const &,QString const &,QFlags<QMessageBox::StandardButton>,QMessageBox::StandardButton)
-.text:000000014008DDB0 public: static enum QMessageBox::StandardButton QMessageBox::information(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) endp
-.text:000000014008DDB0
+.text:14008DDB0 public: static enum QMessageBox::StandardButton QMessageBox::information(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) proc near
+.text:14008DDB0                 jmp     cs:QMessageBox::information(QWidget *,QString const &,QString const &,QFlags<QMessageBox::StandardButton>,QMessageBox::StandardButton)
+.text:14008DDB0 public: static enum QMessageBox::StandardButton QMessageBox::information(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) endp
+.text:14008DDB0
 ...
 
-.text:000000014008E030 public: static enum QMessageBox::StandardButton QMessageBox::warning(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) proc near
-.text:000000014008E030                 jmp     cs:QMessageBox::warning(QWidget *,QString const &,QString const &,QFlags<QMessageBox::StandardButton>,QMessageBox::StandardButton)
-.text:000000014008E030 public: static enum QMessageBox::StandardButton QMessageBox::warning(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) endp
-.text:000000014008E030
+.text:14008E030 public: static enum QMessageBox::StandardButton QMessageBox::warning(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) proc near
+.text:14008E030                 jmp     cs:QMessageBox::warning(QWidget *,QString const &,QString const &,QFlags<QMessageBox::StandardButton>,QMessageBox::StandardButton)
+.text:14008E030 public: static enum QMessageBox::StandardButton QMessageBox::warning(class QWidget *, class QString const &, class QString const &, class QFlags<enum QMessageBox::StandardButton>, enum QMessageBox::StandardButton) endp
+.text:14008E030
 ```
 
-Cross-referencing `warning` leads to a disconnected code island. 
+Cross-referencing the `QMessageBox::warning` call reveals a **disconnected code island** in the control flow graph—a basic block floating without incoming edges due to unresolved obfuscated jumps.
 
 ![QMessageBox::warning XREF](https://lh3.googleusercontent.com/pw/AP1GczOO1bW_pKhW55FWBVx-DUkDAtt-N2dbIuU2XQE-oBocsGi9-KeZjH-PBoWgqsz1ZTTIWd2udErLUBcwJrHJt_IJLwMOHgKCEoYJGmy4Z_jcYL6FoG1JEln6qOLz_QyfIDypJcDrVwWFFf3Ro1-DU2Q6=w2364-h602-s-no-gm)
 _**Figure: QMessageBox::warning XREF**_
 
-Disassembly shows a single orphan byte (`0x48`) separating a computed jump from its target call—a byproduct of prior `jmp rax` misalignment.
+Disassembly of the isolated block reveals a single orphan byte (`0x48`) that separates the computed jump from its intended call target—a lingering artifact caused by earlier `jmp rax` misalignments that disrupted IDA's code recognition.
 
 ```assembly
-.text:000000014002A4DD                 mov     rax, cs:off_1400B7878
-.text:000000014002A4E4                 mov     r10, 0B77E22513A2CE62Ch
-.text:000000014002A4EE                 add     rax, r10
-.text:000000014002A4EE ; ---------------------------------------------------------------------------
-.text:000000014002A4F1                 db  48h ; H
-.text:000000014002A4F2 ; ---------------------------------------------------------------------------
-.text:000000014002A4F2
-.text:000000014002A4F2 loc_14002A4F2:                       ; DATA XREF: .rdata:000000014009AB14↓o
-.text:000000014002A4F2 ;   try {
-.text:000000014002A4F2                 sub     esp, 30h
-.text:000000014002A4F5                 mov     r10, rsp
-.text:000000014002A4F8                 mov     dword ptr [r10+20h], 0
-.text:000000014002A500                 call    rax             ; ?warning@QMessageBox
-.text:000000014002A502                 add     rsp, 30h
-.text:000000014002A502 ;   } // starts at 14002A4F2
+.text:14002A4DD   mov     rax, cs:off_1400B7878
+.text:14002A4E4   mov     r10, 0B77E22513A2CE62Ch
+.text:14002A4EE   add     rax, r10
+.text:14002A4EE ; ---------------------------------------------------------------------------
+.text:14002A4F1   db  48h ; H
+.text:14002A4F2 ; ---------------------------------------------------------------------------
+.text:14002A4F2
+.text:14002A4F2 loc_14002A4F2:                       ; DATA XREF: .rdata:000000014009AB14↓o
+.text:14002A4F2 ;   try {
+.text:14002A4F2   sub     esp, 30h
+.text:14002A4F5   mov     r10, rsp
+.text:14002A4F8   mov     dword ptr [r10+20h], 0
+.text:14002A500   call    rax             ; ?warning@QMessageBox
+.text:14002A502   add     rsp, 30h
+.text:14002A502 ;   } // starts at 14002A4F2
 ```
 
-Undefining and redefining the region as code restores continuity - the CFG reconnected.
+Undefining the orphan byte and redefining the entire region as code restores proper instruction alignment, seamlessly reconnecting the control flow graph (CFG) and integrating the isolated block back into the function's structure.
 
 ```assembly
-.text:000000014002A4DD                 mov     rax, cs:off_1400B7878
-.text:000000014002A4E4                 mov     r10, 0B77E22513A2CE62Ch
-.text:000000014002A4EE                 add     rax, r10
-.text:000000014002A4EE ; ---------------------------------------------------------------------------
-.text:000000014002A4F1                 db  48h ; H
-.text:000000014002A4F2 ;   try {
-.text:000000014002A4F2                 db  83h                 ; DATA XREF: .rdata:000000014009AB14↓o
-.text:000000014002A4F3                 db 0ECh
-.text:000000014002A4F4                 db  30h ; 0
-.text:000000014002A4F5                 db  49h ; I
-.text:000000014002A4F6                 db  89h
-.text:000000014002A4F7                 db 0E2h
-.text:000000014002A4F8                 db  41h ; A
-.text:000000014002A4F9                 db 0C7h
-.text:000000014002A4FA                 db  42h ; B
-.text:000000014002A4FB                 db  20h
-.text:000000014002A4FC                 db    0
-.text:000000014002A4FD                 db    0
-.text:000000014002A4FE                 db    0
-.text:000000014002A4FF                 db    0
-.text:000000014002A500                 db 0FFh
-.text:000000014002A501                 db 0D0h
-.text:000000014002A502                 db  48h ; H
-.text:000000014002A503                 db  83h
-.text:000000014002A504                 db 0C4h
-.text:000000014002A505                 db  30h ; 0
-.text:000000014002A505 ;   } // starts at 14002A4F2
+.text:14002A4DD   mov     rax, cs:off_1400B7878
+.text:14002A4E4   mov     r10, 0B77E22513A2CE62Ch
+.text:14002A4EE   add     rax, r10
+.text:14002A4EE ; ---------------------------------------------------------------------------
+.text:14002A4F1                 db  48h ; H
+.text:14002A4F2 ;   try {
+.text:14002A4F2   db  83h                 ; DATA XREF: .rdata:000000014009AB14↓o
+.text:14002A4F3   db 0ECh
+.text:14002A4F4   db  30h ; 0
+.text:14002A4F5   db  49h ; I
+.text:14002A4F6   db  89h
+.text:14002A4F7   db 0E2h
+.text:14002A4F8   db  41h ; A
+.text:14002A4F9   db 0C7h
+.text:14002A4FA   db  42h ; B
+.text:14002A4FB   db  20h
+.text:14002A4FC   db    0
+.text:14002A4FD   db    0
+.text:14002A4FE   db    0
+.text:14002A4FF   db    0
+.text:14002A500   db 0FFh
+.text:14002A501   db 0D0h
+.text:14002A502   db  48h ; H
+.text:14002A503   db  83h
+.text:14002A504   db 0C4h
+.text:14002A505   db  30h ; 0
+.text:14002A505 ;    } // starts at 14002A4F2
 ```
 
 ```assembly
-.text:000000014002A4DD                 mov     rax, cs:off_1400B7878
-.text:000000014002A4E4                 mov     r10, 0B77E22513A2CE62Ch
-.text:000000014002A4EE                 add     rax, r10
-.text:000000014002A4F1
-.text:000000014002A4F1 loc_14002A4F1:                          ; DATA XREF: .rdata:000000014009AB14↓o
-.text:000000014002A4F1                 sub     rsp, 30h
-.text:000000014002A4F5                 mov     r10, rsp
-.text:000000014002A4F8                 mov     dword ptr [r10+20h], 0
-.text:000000014002A500                 call    rax             ; ?warning@QMessageBox
-.text:000000014002A502                 add     rsp, 30h
-.text:000000014002A502 ;   } // starts at 14002A4F2
+.text:14002A4DD   mov     rax, cs:off_1400B7878
+.text:14002A4E4   mov     r10, 0B77E22513A2CE62Ch
+.text:14002A4EE   add     rax, r10
+.text:14002A4F1
+.text:14002A4F1 loc_14002A4F1:                          ; DATA XREF: .rdata:000000014009AB14↓o
+.text:14002A4F1   sub     rsp, 30h
+.text:14002A4F5   mov     r10, rsp
+.text:14002A4F8   mov     dword ptr [r10+20h], 0
+.text:14002A500   call    rax             ; ?warning@QMessageBox
+.text:14002A502   add     rsp, 30h
+.text:14002A502 ;   } // starts at 14002A4F2
 ```
 
 ![Orphaned byte fixes CFG](https://lh3.googleusercontent.com/pw/AP1GczPCeXY8gAhtDmbocoJyOGc9ijr0VyFKSv0cgQ-2mzvRRxgmT4SHxkuZ7YZs3cSAadOzgWlKYILKoe9XrqMYijnBryYMyJTjJcB5dxoCJati1ox3duB8I-aX-dMX8S2JVzn8JOkeyyRPXbjkpV4neUNs=w626-h654-s-no-gm)
 _**Figure: Orphaned byte fixes CFG**_
 
-Upward traversal reveals a conditional branch controlled by a boolean variable—renamed `v440_is_equal_final_constants`.
+Tracing upward through the now-reconnected control flow graph uncovers a conditional branch governed by a boolean flag. This variable is renamed to `v440_is_equal_final_constants` to reflect its role in determining whether the final accumulated value matches the expected constant.
 
 ![Conditional jump](https://lh3.googleusercontent.com/pw/AP1GczOzBPRqIYQbNfHSUZbddnQ2QzNovO8SrpJU2xptAl0vHh8jSFwnYnahJDCZtrFpcDXHVPTFDmEl6BBUhLir5RlCD0b0UxAly87duI_WB1UpIWlGYriQfvJXZBDz5bqr-87MfP1vEmKXqmbNHU2VwGyf=w1712-h654-s-no-gm)
 _**Figure: Conditional jump**_
 
-The check `al & 1` branches if non-zero. The true branch displays the success message via `QMessageBox::information`; the false branch shows the warning.
+The conditional branch is controlled by the low bit of the `AL` register via a `test al, 1` (or equivalent `al & 1`) check, jumping if the result is non-zero. When true, execution flows to the success path, displaying the flag using `QMessageBox::information`. Otherwise, it takes the false branch and shows the "Wrong password" warning via `QMessageBox::warning`.
 
 ```assembly
-.text:00000001400268A0 loc_1400268A0:                          ; DATA XREF: .rdata:000000014009AAD4↓o
-.text:00000001400268A0                 sub     rsp, 30h
-.text:00000001400268A4                 mov     r10, rsp
-.text:00000001400268A7                 mov     dword ptr [r10+20h], 0
-.text:00000001400268AF                 call    rax             ; ?information@QMessageBox
+.text:1400268A0 loc_1400268A0:                          ; DATA XREF: .rdata:000000014009AAD4↓o
+.text:1400268A0                 sub     rsp, 30h
+.text:1400268A4                 mov     r10, rsp
+.text:1400268A7                 mov     dword ptr [r10+20h], 0
+.text:1400268AF                 call    rax             ; ?information@QMessageBox
 ```
 
-This flag is set when a 64-bit value at `[rax+78h]` equals `0x0BC42D5779FEC401`. 
+The boolean flag `v440_is_equal_final_constants` is set to true when the 64-bit value stored at the memory location `[rax+78h]` exactly matches the hardcoded constant `0x0BC42D5779FEC401`.
 
 ```assembly
-.text:0000000140021E1B                 mov     rax, [rbp+2950h+var_3C8]
-.text:0000000140021E22                 mov     [rbp+2950h+var_21D0], rax
-.text:0000000140021E29                 mov     rax, [rax+78h]
-.text:0000000140021E2D                 mov     rcx, 0BC42D5779FEC401h
-.text:0000000140021E37                 sub     rax, rcx
-.text:0000000140021E3A                 setz    al
-.text:0000000140021E3D                 mov     [rbp+2950h+v440_is_equal_final_constants], al
+.text:140021E1B                 mov     rax, [rbp+2950h+var_3C8]
+.text:140021E22                 mov     [rbp+2950h+var_21D0], rax
+.text:140021E29                 mov     rax, [rax+78h]
+.text:140021E2D                 mov     rcx, 0BC42D5779FEC401h
+.text:140021E37                 sub     rax, rcx
+.text:140021E3A                 setz    al
+.text:140021E3D                 mov     [rbp+2950h+v440_is_equal_final_constants], al
 ```
 
-```C
+```c
 uint64_t v = *(uint64_t*)(obj + 0x78);
 uint8_t is_equal = (v == 0x0BC42D5779FEC401);
 v440_is_equal_final_constants = is_equal;
@@ -891,8 +891,6 @@ set QT_QPA_PLATFORM_PLUGIN_PATH=%~dp0
 start C:\x64dbg_snapshot_2025-08-19_19-40\release\x64\x64dbg.exe
 ```
 
-Attachment to `FlareAuthenticator.exe` sets a breakpoint at the comparison (ASLR-adjusted). Entering 25 digits and confirming hits it. Sync activates via `!sync`.
-
 ![x64dbg and IDA are in sync](https://lh3.googleusercontent.com/pw/AP1GczO_z5LFX_-PEkQKLHHmlvKcSRPCJtDOH1ppB4p42MeReKO5uerx2a-9ii9hTTXmXzMhlRx5BKxvdrNZMc7uXmgV2skJbSq3cnTPihFHGs-10tMftOeq48V7_kRtRilvX7JpwLi352tsgnQFk7yNmAgB=w1248-h654-s-no-gm)
 _**Figure: x64dbg and IDA are in sync**_
 
@@ -904,57 +902,57 @@ _**Figure: x64dbg Follow address in dump**_
 ![x64dbg set hardware breakpoint access](https://lh3.googleusercontent.com/pw/AP1GczPOMoyPJI-Nfsp5GCP1qnOa2PWrXrV1aHVRYtOgc_ijuHgy4uS93DZ2OYw6hU6M4vYA25eEBWM4h7QP9419nJK7fu2EjK6qTB1O_Su9oQr_Js4DalueS92ZtV2fD6GN3EcLpM0womww2Ju_LqTH-CPs=w776-h736-s-no-gm)
 _**Figure: x64dbg set hardware breakpoint access**_
 
-The first hit occurs in `sub_140012E50`, where a 64-bit addition routine updates the global value using a product stored in `var_C78`:
+The first breakpoint hit lands in `sub_140012E50`, a function that performs a 64-bit addition to update the global accumulator using the product previously stored in the local variable `var_C78`.
 
 ![x64dbg breakpoint hits](https://lh3.googleusercontent.com/pw/AP1GczPadZOUkQ3QdAWovn81NZqghEokt3iN21FL4pABrHWczJPbDWkieosSi5xiXXPDiRuLB9C3SjeIMx3Z4BOZThtyFqKHgZmXD5H7pm62W4suxSQWtD8vxp-eBFQwJHJPQk0xXCf5zyIIV_KXFnxMjlw6=w1378-h736-s-no-gm)
 _**Figure: x64dbg hardware breakpoint hits**_
 
-Sync places it in `sub_140012E50`.
+The synchronized view in IDA immediately jumps to `0x140016AD4` in `sub_140012E50`.
 
 ```assembly
-.text:0000000140016AC9                 mov     r9, [rbp+0FC0h+var_C78]
-.text:0000000140016AD0                 mov     rdx, [rax+78h]
-.text:0000000140016AD4                 mov     rcx, r9
-.text:0000000140016AD7                 not     rcx
-.text:0000000140016ADA                 mov     r8, rdx
-.text:0000000140016ADD                 not     r8
-.text:0000000140016AE0                 or      r8, rcx
-.text:0000000140016AE3                 mov     rcx, rdx
-.text:0000000140016AE6                 add     rcx, r9
-.text:0000000140016AE9                 lea     r8, [r8+rcx+1]
-.text:0000000140016AEE                 or      rdx, r9
-.text:0000000140016AF1                 sub     rcx, rdx
-.text:0000000140016AF4                 mov     rdx, rcx
-.text:0000000140016AF7                 or      rdx, r8
-.text:0000000140016AFA                 and     rcx, r8
-.text:0000000140016AFD                 add     rcx, rdx
-.text:0000000140016B00                 mov     [rax+78h], rcx
+.text:140016AC9   mov     r9, [rbp+0FC0h+var_C78]
+.text:140016AD0   mov     rdx, [rax+78h]
+.text:140016AD4   mov     rcx, r9
+.text:140016AD7   not     rcx
+.text:140016ADA   mov     r8, rdx
+.text:140016ADD   not     r8
+.text:140016AE0   or      r8, rcx
+.text:140016AE3   mov     rcx, rdx
+.text:140016AE6   add     rcx, r9
+.text:140016AE9   lea     r8, [r8+rcx+1]
+.text:140016AEE   or      rdx, r9
+.text:140016AF1   sub     rcx, rdx
+.text:140016AF4   mov     rdx, rcx
+.text:140016AF7   or      rdx, r8
+.text:140016AFA   and     rcx, r8
+.text:140016AFD   add     rcx, rdx
+.text:140016B00   mov     [rax+78h], rcx
 ```
 
-Backtracing `var_C78` reveals it is the result of multiplying two return values from `sub_140081760`.
+Tracing backward from `var_C78` shows that it holds the product of two return values, each obtained from separate calls to `sub_140081760`.
 
 ## Tracing xrefs to **var_C78**
-XREFs reveal write locations.
+Cross-references (XREFs) to `var_C78` pinpoint the exact locations where this variable is written.
 
 ![xrefs to var_C78](https://lh3.googleusercontent.com/pw/AP1GczNuqghVc_lQIxhvEeHhBKsjBIutVaBpq4Xd4B3EJQ35amppuLIy_IruBJNqUrosBm2wwCWfzOSnHk9UOZGY2aH7Dd4weNp0Iln-F6GfotXfCQkLwy4qRICSRqWABM6gnkJWg9RoAPzlabgXHszdvU8f=w1378-h412-s-no-gm)
 _**Figure: xrefs to var_C78**_
 
-One update multiplies results from `sub_140081760` with `var_C00`.
+One of these write locations computes the product of a return value from `sub_140081760` and the contents of `var_C00`, storing the result back into `var_C78`.
 
 ```assembly
-.text:0000000140016766                 call    rax             ; sub_140081760
-.text:0000000140016768                 mov     rcx, rax
-.text:000000014001676B                 mov     rax, [rbp+0FC0h+var_C00]
-.text:0000000140016772                 imul    rax, rcx
-.text:0000000140016776                 mov     [rbp+0FC0h+var_C78], rax
+.text:140016766   call    rax             ; sub_140081760
+.text:140016768   mov     rcx, rax
+.text:14001676B   mov     rax, [rbp+0FC0h+var_C00]
+.text:140016772   imul    rax, rcx
+.text:140016776   mov     [rbp+0FC0h+var_C78], rax
 ```
 
-`var_C00` similarly derives from `sub_140081760`.
+Similarly, `var_C00` is populated with the return value from another call to `sub_140081760`.
 
 ```assembly
-.text:0000000140015E99                 call    rax             ; sub_140081760
-.text:0000000140015E9B                 mov     rcx, [rbp+0FC0h+var_948]
-.text:0000000140015EA2                 mov     [rbp+0FC0h+var_C00], rax
+.text:140015E99   call    rax             ; sub_140081760
+.text:140015E9B   mov     rcx, [rbp+0FC0h+var_948]
+.text:140015EA2   mov     [rbp+0FC0h+var_C00], rax
 ```
 
 Both operands to the multiplication also originate from `sub_140081760`, suggesting that each digit contributes two derived values whose product is accumulated into the final 64-bit sum `global_rax_78h`. Frequent calls to `sub_140081760` lead to TTD for comprehensive tracing. Functions rename to `accumulate_final_value_sub_140012E50` and `derive_value_sub_140081760`.
@@ -962,13 +960,13 @@ Both operands to the multiplication also originate from `sub_140081760`, suggest
 ## Time Travel Debugging with WinDbg TTD
 To confirm the per-digit pattern, WinDbg’s Time Travel Debugging (TTD) records full execution traces for offline analysis. After attaching and enabling recording, the application is run with sample input "12345678909876543...". The **ret-sync** plugin again bridges WinDbg and IDA.
 
-Ret-sync loads via `!load sync; !sync`, aligning with IDA.
+The ret-sync plugin is loaded in x64dbg using `!load sync` followed by `!sync`, which establishes synchronization with IDA.
 
 ![WinDbg TTD sync with IDA](https://lh3.googleusercontent.com/pw/AP1GczMWUW23MLuN5vQVfEUQ3C8h6BNiaGjaOCV8IWQ_PlqYAdkDbgYHZQo7JOOIPhmW0ZR-bAECbGCdJysJeZDGUe1XqQM89I-3WX9KfH7XJkxKiRfVBHRL2Q8Swt5NkvlBCaNbBBtMGpQ95_ePZHWty879=w1438-h736-s-no-gm)
 _**Figure: WinDbg TTD sync with IDA**_
 
 ## TTD Queries - Find sequence calls
-Queries analyze call patterns. Module base determination precedes address calculation.
+TTD queries are used to analyze call patterns across the execution trace. Before constructing these queries, the module base address of `FlareAuthenticator.exe` is determined to ensure all function addresses are correctly resolved.
 
 ```bash
 0:000> lm m FlareAuthenticator
@@ -1096,26 +1094,26 @@ if (global_rax_78h == 0x0BC42D5779FEC401) {
 Deterministic outputs per input allow black-box treatment and value capture for solving.
 
 ## Capturing All Derived Values for Analysis
-With 25 positions and 10 possible digits, **250 unique products** must be collected. An x64dbg conditional breakpoint logs the product (`r9`) just before accumulation:
+With **25 positions** and **10 possible digits** per position, **250 unique products** must be captured. A conditional breakpoint in x64dbg logs the value in `r9`—the computed product—just before it is added to the global accumulator.
 
 ```assembly
-.text:0000000140016AC9                 mov     r9, [rbp+0FC0h+var_C78]
-.text:0000000140016AD0                 mov     rdx, [rax+78h]
-.text:0000000140016AD4                 mov     rcx, r9
-.text:0000000140016AD7                 not     rcx
-.text:0000000140016ADA                 mov     r8, rdx
-.text:0000000140016ADD                 not     r8
-.text:0000000140016AE0                 or      r8, rcx
-.text:0000000140016AE3                 mov     rcx, rdx
-.text:0000000140016AE6                 add     rcx, r9
-.text:0000000140016AE9                 lea     r8, [r8+rcx+1]
-.text:0000000140016AEE                 or      rdx, r9
-.text:0000000140016AF1                 sub     rcx, rdx
-.text:0000000140016AF4                 mov     rdx, rcx
-.text:0000000140016AF7                 or      rdx, r8
-.text:0000000140016AFA                 and     rcx, r8
-.text:0000000140016AFD                 add     rcx, rdx
-.text:0000000140016B00                 mov     [rax+78h], rcx
+.text:140016AC9   mov     r9, [rbp+0FC0h+var_C78]
+.text:140016AD0   mov     rdx, [rax+78h]
+.text:140016AD4   mov     rcx, r9
+.text:140016AD7   not     rcx
+.text:140016ADA   mov     r8, rdx
+.text:140016ADD   not     r8
+.text:140016AE0   or      r8, rcx
+.text:140016AE3   mov     rcx, rdx
+.text:140016AE6   add     rcx, r9
+.text:140016AE9   lea     r8, [r8+rcx+1]
+.text:140016AEE   or      rdx, r9
+.text:140016AF1   sub     rcx, rdx
+.text:140016AF4   mov     rdx, rcx
+.text:140016AF7   or      rdx, r8
+.text:140016AFA   and     rcx, r8
+.text:140016AFD   add     rcx, rdx
+.text:140016B00   mov     [rax+78h], rcx
 ```
 
 ![x64dbg conditional breakpoint log r9 to file](https://lh3.googleusercontent.com/pw/AP1GczPHHnPS5Eupuc1b-xBvd66nrGpwPHZb6BYNQTlIP5bRLh4CgwfP_5helxiLRPHkrIQL9IJ8C0glsjHSAlMQlTmxf1deXurbuIWf5dghFmoVlbhY8HOs4crSrIYqwH3RZpSj0bbxhasEXuspaCgIitOK=w1566-h736-s-no-gm)
@@ -1331,7 +1329,7 @@ if __name__ == "__main__":
     main()
 ```
 
-The resulting flareauthenticator_x64dbg.log contains 250 lines of precomputed products.
+The resulting `flareauthenticator_x64dbg.log` file contains **250 lines**, each recording a precomputed product for a specific digit and position.
 
 ```text
 0x19B3240445AA06
@@ -1587,7 +1585,7 @@ The resulting flareauthenticator_x64dbg.log contains 250 lines of precomputed pr
 ```
 
 ## Solving with Z3
-A final Z3 script models the constraint system: select one product per position such that their sum equals the target constant `0x0BC42D5779FEC401`
+A final **Z3 script** models the constraint system: for each of the 25 positions, select one of the 10 precomputed products such that their total sum equals the target constant `0x0BC42D5779FEC401`.
 
 ```python
 # z3_solve_input_digits.py
@@ -1789,15 +1787,41 @@ bucket 23: index 9
 bucket 24: index 6
 ```
 
-Entering this 25-digit sequence triggers the success dialog: `s0m3t1mes_1t_do3s_not_m4ke_any_s3n5e@flare-on.com`.
+Entering the **25-digit sequence** `4498291314891210521449296` triggers the success dialog, revealing the flag: `s0m3t1mes_1t_do3s_not_m4ke_any_s3n5e@flare-on.com`.
 
 ![Correct password found by z3](https://lh3.googleusercontent.com/pw/AP1GczPPN9dMJl-XszD2tDaY21BorbNdq41h5wPZJBq2AoWeQjx7y6lRjKJnZahK16QDX4H7gc6v4K84krCV_iwdRsAqiN7dLFe4zKx_z9niPyb4wEbXValFJI7sEWJ3f8xFJjHVJL8rF9tUS6lkZwTHDRJI=w964-h736-s-no-gm)
 _**Figure: Correct password found by z3**_
 
-# Final thought
-Obfuscation initially complicates analysis, yet XREF recovery and flow reconstruction enable a bottom-up strategy without exhaustive deobfuscation. Black-box handling of core functions, paired with Z3 constraints and tools like WinDbg TTD plus ret-sync, accelerates resolution.
+# Recap
+After loading the binary in IDA and facing massive, tangled CFGs, the path forward isn’t brute-force deobfuscation — it’s a **bottom-up strategy**:  
+> **Start from what you can see — the "Wrong password" `QMessageBox` — and trace backward.**
 
-### Further Reading
+1. **Fix static analysis roadblocks**  
+   - Patch `jmp rax` + junk bytes → reconnect CFG  
+   - Resolve indirect calls via script → restore XREFs  
+
+2. **Anchor in runtime behavior**  
+   - Break on `QMessageBox::warning` → trace to conditional `setz al`  
+   - Discover final check: `[rax+78h] == 0x0BC42D5779FEC401`  
+
+3. **Dynamic validation with TTD**  
+   - Record full input trace in **WinDbg TTD**  
+   - Query: 50 calls to `derive_value_sub_140081760` → 2 per digit × 25  
+
+4. **Capture black-box outputs**  
+   - Automate 250 inputs (25 pos × 10 digits)  
+   - Log product `r9` before accumulation  
+
+5. **Solve with Z3**  
+   - Model: pick one product per position → sum = target constant  
+   - Output: **25-digit sequence** `4498291314891210521449296`
+
+**Flag:** `s0m3t1mes_1t_do3s_not_m4ke_any_s3n5e@flare-on.com`
+
+# Final thought
+When obfuscation overwhelms, **don’t fight the junk — follow the data**. Start from UI, trace inward, treat opaque functions as oracles, and let **TTD + Z3** cut through the noise.
+
+# Further Reading
 - [Time Travel Debugging Overview](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/time-travel-debugging-overview) – Official documentation on reversible debugging with WinDbg TTD.
 - [Ret-Sync GitHub Repository](https://github.com/bootleg/ret-sync) – Synchronization plugin bridging debuggers and IDA for streamlined workflows.
 - [Z3 Guided Tour](https://microsoft.github.io/z3guide/docs/logic/intro/) - State-of-the art theorem prover from Microsoft Research
