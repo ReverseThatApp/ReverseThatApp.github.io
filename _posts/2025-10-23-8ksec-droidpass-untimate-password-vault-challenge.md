@@ -1526,8 +1526,10 @@ A few recommended improvements to make such an app more resilient:
 - **Runtime checks + defense-in-depth:** Combine runtime attestation, secure key storage, and server-side verification rather than relying solely on client-side secrets.
 - **Avoid static secrets:** Don't embed long-term secrets in the binary; if you must embed data, protect it with multiple layers (and assume that binary will be analyzed).
 
-# Be the First Blood
-I thoroughly enjoyed the journey of unraveling this challenge — though writing the full solution for submission to the 8ksec portal proved to be just as demanding as the reverse engineering itself. After several days of refining the write-up, I finally received one of the most genuine and motivating pieces of feedback I’ve ever gotten from a CTF platform. That’s when I knew all the efforts had been worth it. 😄
+# First Blood – The Global Solve
+Solving this challenge was an incredibly rewarding experience. The reversing part was tough but enjoyable — the real challenge came afterward, when I spent several days polishing the full write-up for submission to the 8ksec Battlegrounds portal. It was worth every hour. A few days later, I received an email confirming that I was **the first person globally** to solve the DroidPass Android challenge.  
+
+The feedback I got from the 8ksec team was one of the most genuine and motivating responses I’ve ever received in a CTF-like environment — a reminder of why we do this: for the curiosity, the grind, and that rare thrill of breaking something truly challenging.
 
 ![8ksec feedback](https://lh3.googleusercontent.com/pw/AP1GczOZaes4qR35BzlSGOvfYCgzKHAuzz-DcET6gU9QyRVm_DBCdHOayTVF2-piDQlXoLIZVdWIxXptE9u9T2dLZMTKS-zw5LbdJdu4bw0aFa4p1dljkLbFdoO2VcD3-hLivAQHcXT22PosY-Z8ONBcuadU=w868-h736-s-no-gm)
 _**Figure: 8ksec feedback**_
