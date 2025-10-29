@@ -4,10 +4,12 @@ categories: [Android, Reverse Engineering]
 tags: [android, flutter, Blutter, reverse-engineering, jadx-gui, adb, apksigner, security]
 description: "A detailed walkthrough of how to statically reverse-engineer the DroidPass Flutter-based password vault challenge from 8ksec, uncovering its AES key derivation, IV generation, and encryption flaws."
 image:
-    path: https://lh3.googleusercontent.com/pw/AP1GczPmwdRNhWmNw9EG4bTchi_-wjlslwCCxi_KUtiMzgh-KYFrZB4-K68h7ahq-G3toi2agrDrWJM4qdZ68uEXP1tqybBq607X7FDBrw2RpJIAh38TQvQd1PehriX2WdqcA3HAGIHzi6PGn3ajQUo9OamS=w560-h622-s-no-gm
+    path: https://lh3.googleusercontent.com/pw/AP1GczOV5_Gdq5Ved7zHukh6smBHBcUM-xi0IYilSVXJvu7u9V74oejJbIa64pIOEwQj3O4bmTA0r5ppi1yE2C0JAV0ea9b55aOlDclS45E5lqH7agM8g3a6OdKlYSqVQHRl79N1-10o81rscpwI47JDzq9A=w818-h736-s-no-gm?authuser=2
     alt: 8ksec DroidPass - Ultimate Password Vault
 permalink: /reverse-engineering-droidpass-flutter-password-vault/    
 ---
+
+I came across a recent LinkedIn post from **8ksec** mentioning that *Nobody's cracked the DroidPass Android challenge yet*, even though it has been out for months. That immediately caught my attention — a Flutter-based Android password vault that supposedly hides its base encryption key inside the APK sounded too tempting to ignore. So I decided to dive in, not only to try solving it but also to understand **why** it managed to remain unsolved for so long.
 
 # Introduction
 > "Introducing DroidPass—the “secure” password manager that promises military-grade encryption for all your sensitive credentials! DroidPass uses advanced encryption techniques to store your passwords in a protected database, keeping them safe from prying eyes. Our intuitive interface lets you generate strong, unique passwords with just a tap, while our security module continuously monitors your device for threats.
@@ -1523,6 +1525,12 @@ A few recommended improvements to make such an app more resilient:
 - **Remote provisioning:** Fetch sensitive keys or secrets from a server after proper authentication (and preferably with attestation to verify client integrity).
 - **Runtime checks + defense-in-depth:** Combine runtime attestation, secure key storage, and server-side verification rather than relying solely on client-side secrets.
 - **Avoid static secrets:** Don't embed long-term secrets in the binary; if you must embed data, protect it with multiple layers (and assume that binary will be analyzed).
+
+# Be the First Blood
+I thoroughly enjoyed the journey of unraveling this challenge — though writing the full solution for submission to the 8ksec portal proved to be just as demanding as the reverse engineering itself. After several days of refining the write-up, I finally received one of the most genuine and motivating pieces of feedback I’ve ever gotten from a CTF platform. That’s when I knew all the efforts had been worth it. 😄
+
+![8ksec feedback](https://lh3.googleusercontent.com/pw/AP1GczOZaes4qR35BzlSGOvfYCgzKHAuzz-DcET6gU9QyRVm_DBCdHOayTVF2-piDQlXoLIZVdWIxXptE9u9T2dLZMTKS-zw5LbdJdu4bw0aFa4p1dljkLbFdoO2VcD3-hLivAQHcXT22PosY-Z8ONBcuadU=w868-h736-s-no-gm)
+_**Figure: 8ksec feedback**_
 
 # Conclusion
 This DroidPass challenge is an excellent demonstration that compiled Flutter code and obfuscation are not the same as secret management. Static analysis—when combined with a modest understanding of the Dart VM, tagged Smis, and AOT metadata—can reveal everything needed to reconstruct cryptographic keys. The correct defensive posture is to avoid storing critical secrets in the app itself and to use platform or server-backed key management.
