@@ -4,7 +4,7 @@ categories: [Android, Reverse Engineering]
 tags: [android, flutter, Blutter, reverse-engineering, jadx-gui, adb, apksigner, security]
 description: "A detailed walkthrough of how to statically reverse-engineer the DroidPass Flutter-based password vault challenge from 8ksec, uncovering its AES key derivation, IV generation, and encryption flaws."
 image:
-    path: https://lh3.googleusercontent.com/pw/AP1GczOV5_Gdq5Ved7zHukh6smBHBcUM-xi0IYilSVXJvu7u9V74oejJbIa64pIOEwQj3O4bmTA0r5ppi1yE2C0JAV0ea9b55aOlDclS45E5lqH7agM8g3a6OdKlYSqVQHRl79N1-10o81rscpwI47JDzq9A=w818-h736-s-no-gm?authuser=2
+    path: https://lh3.googleusercontent.com/pw/AP1GczMuZTyQ2WIMeZqgr48R1ilIUgGbKPoOU-RDn8ysbWwDoNzcsPE7HJEFbL98f3Lw5u-122OFJcZxwWl3dF8mp5rgu0zq7lKY77veJ3yBhzxbzkcXopIxJ2-H3E1RCycELtbOEddRj4oUVCdF0T70ocdu=w1554-h838-s-no-gm
     alt: 8ksec DroidPass - Ultimate Password Vault
 permalink: /reverse-engineering-droidpass-flutter-password-vault/    
 ---
