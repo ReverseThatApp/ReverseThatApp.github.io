@@ -15,6 +15,7 @@ Because MD5 is a broken cryptographic function, these hashes are trivially rever
 > CVE: **CVE-2025-52026** (*Reserved - pending public publication*)  
 > This public advisory serves as the official reference for CVE publication.  
 > Technical exploitation details and live data are intentionally withheld to reduce risk to end users.  
+{: .prompt-info}
 
 ---
 
