@@ -24,7 +24,7 @@ Because MD5 is a broken cryptographic function, these hashes are trivially rever
 The vulnerability was discovered incidentally in **May 2025** during normal use of an F&B client’s mobile application that communicates with the Aptsys gemscms backend.
 The same backend platform is shared among multiple Aptsys client apps, and independent review confirmed an unauthenticated data exposure affecting all connected deployments.
 
-Attempts to responsibly disclose the issue to the vendor were made through multiple channels between **May-Nov 2025**, but no remediation or formal acknowledgment was received.
+Multiple attempts to responsibly disclose the issue to the vendor were made through multiple channels between **May-Nov 2025**, but no remediation or formal acknowledgment was received.
 
 ---
 

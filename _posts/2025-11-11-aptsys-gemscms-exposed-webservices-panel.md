@@ -25,7 +25,7 @@ The issue was discovered during normal use of a mobile client connected to the A
 The backend web services testing panels, designed for internal development and QA, were found accessible from the public internet on production servers.  
 No authentication or access control was enforced, allowing any external party to browse and execute internal APIs directly from a web browser.
 
-Attempts to contact Aptsys through multiple channels between **May–Nov 2025** resulted in no acknowledgment or remediation.
+Multiple attempts to responsibly disclose the issue to the vendor were made through multiple channels between **May-Nov 2025**, but no remediation or formal acknowledgment was received.
 
 ---
 
@@ -123,6 +123,8 @@ To reduce exploitation risk, the following details are intentionally withheld:
 - Live screenshots or HTML source code of exposed panels  
 - Proof-of-concept HTTP requests  
 - Identifying customer domain names or deployment details  
+
+Operators of Aptsys gemscms deployments should treat this as a high-severity issue and apply mitigations immediately. Vendors and CERT teams may contact the reporter for full technical details.
 
 ---
 
