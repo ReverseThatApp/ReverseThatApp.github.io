@@ -102,15 +102,17 @@ This information could aid further attacks such as path traversal, SQL injection
 - **May 2025:** Vulnerability discovered and verified in production deployment.  
 - **May–Nov 2025:** Multiple disclosure attempts to Aptsys; no remediation confirmed.  
 - **Jul 2025:** CVE-2025-52022 reserved.  
-- **Nov 2025:** Public disclosure published (this advisory).  
+- **Nov 2025:** Initial public advisory published by researcher.
+- **Jan 23, 2026:** CVE-2025-52022 published by NVD.
 
 ---
 
 ## Status
 
 - **Vendor response:** No acknowledgment or fix confirmed as of November 2025.  
-- **CVE status:** RESERVED → Pending PUBLIC upon MITRE confirmation.  
-- **Technical details:** Redacted; available under NDA/PGP for vendor or CERT coordination.
+- **CVE status:** PUBLIC (CVE-2025-52022)
+- **CVE reference:** https://nvd.nist.gov/vuln/detail/CVE-2025-52022
+- **Technical details:** Withheld pending vendor remediation; available to vendors or CERTs under coordinated disclosure.
 
 ---
 
@@ -130,7 +132,7 @@ Operators of Aptsys gemsloyalty deployments should treat this as a high-severity
 ## References
 
 - [Aptsys Official Site](http://aptsys.com.sg/)  
-- [CVE-2025-52022 — Reserved Record (MITRE)](https://cve.mitre.org/)  
+- [CVE-2025-52022 — National Vulnerability Database](https://nvd.nist.gov/vuln/detail/CVE-2025-52022)  
 - [CWE-209: Generation of Error Message Containing Sensitive Information](https://cwe.mitre.org/data/definitions/209.html)  
 - [OWASP Logging and Error Handling Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
 

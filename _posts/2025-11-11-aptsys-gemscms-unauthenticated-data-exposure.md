@@ -98,15 +98,17 @@ A remote attacker can access the affected API endpoint without any authenticatio
 - **May 2025**: Vulnerability discovered and verified in production deployment
 - **May-Nov 2025**:  Multiple disclosure attempts made to Aptsys without remediation 
 - **Jul 2025**: CVE ID reserved (CVE-2025-52026) 
-- **Nov 2025**: Public disclosure published (this advisory) 
+- **Nov 2025:** Initial public advisory published by researcher.
+- **Jan 23, 2026:** CVE-2025-52026 published by NVD.
 
 ---
 
 ## Status
 
 - **Vendor response:** No acknowledgment or fix confirmed as of November 2025  
-- **CVE status:** RESERVED → Pending PUBLIC upon MITRE confirmation  
-- **Technical details:** Redacted; available under NDA/PGP for vendor or CERT coordination
+- **CVE status:** PUBLIC (CVE-2025-52026)
+- **CVE reference:** https://nvd.nist.gov/vuln/detail/CVE-2025-52026
+- **Technical details:** Withheld pending vendor remediation; available to vendors or CERTs under coordinated disclosure.
 
 ---
 
@@ -126,5 +128,5 @@ Operators of Aptsys gemscms deployments should treat this as a high-severity iss
 ## References
 
 - [Aptsys Official Site](http://aptsys.com.sg/)  
-- [CVE-2025-52026 — Reserved Record (MITRE)](https://cve.mitre.org/)  
+- [CVE-2025-52026 — National Vulnerability Database](https://nvd.nist.gov/vuln/detail/CVE-2025-52026)  
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)

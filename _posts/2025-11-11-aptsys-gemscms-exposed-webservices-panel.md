@@ -103,15 +103,17 @@ Each API form can be executed directly, calling live production endpoints withou
 - **May 2025:** Vulnerability discovered and confirmed in production.  
 - **May–Nov 2025:** Multiple disclosure attempts made to Aptsys; no remediation confirmed.
 - **Jul 2025:** CVE-2025-52024 reserved.  
-- **Nov 2025:** Public disclosure published (this advisory).  
+- **Nov 2025:** Initial public advisory published by researcher.
+- **Jan 23, 2026:** CVE-2025-52024 published by NVD.
 
 ---
 
 ## Status
 
 - **Vendor response:** No acknowledgment or fix confirmed as of November 2025.  
-- **CVE status:** RESERVED → Pending PUBLIC upon MITRE confirmation.  
-- **Technical details:** Redacted; available under NDA/PGP for vendor or CERT coordination.
+- **CVE status:** PUBLIC (CVE-2025-52024)
+- **CVE reference:** https://nvd.nist.gov/vuln/detail/CVE-2025-52024
+- **Technical details:** Withheld pending vendor remediation; available to vendors or CERTs under coordinated disclosure.
 
 ---
 
@@ -131,5 +133,5 @@ Operators of Aptsys gemscms deployments should treat this as a high-severity iss
 ## References
 
 - [Aptsys Official Site](http://aptsys.com.sg/)  
-- [CVE-2025-52024 — Reserved Record (MITRE)](https://cve.mitre.org/)  
+- [CVE-2025-52024 — National Vulnerability Database](https://nvd.nist.gov/vuln/detail/CVE-2025-52024)  
 - [OWASP Testing Guide — Unprotected Admin Interfaces](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/01-Information_Gathering/08-Test_for_Exposed_Admin_Pages.html)
