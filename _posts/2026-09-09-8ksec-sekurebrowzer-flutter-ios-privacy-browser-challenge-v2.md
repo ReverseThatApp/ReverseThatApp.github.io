@@ -18,8 +18,8 @@ This post is the walkthrough: how I went from "unknown IPA" to a working one-URL
 Standard first move with any IPA:
 
 ```bash
-unzip SeckureBrowzer.ipa -d Extracted_ipa
-find Extracted_ipa/Payload/Runner.app -maxdepth 2
+$ unzip SeckureBrowzer.ipa -d Extracted_ipa
+$ find Extracted_ipa/Payload/Runner.app -maxdepth 2
 ```
 
 Bundle ID is `com.eightksec.sekurebrowzer`. The executable is named `Runner` — that's Xcode's default project name for a fresh Flutter iOS build, not something a native project would normally be called. And inside `Frameworks/` there are two frameworks that give it away completely:
