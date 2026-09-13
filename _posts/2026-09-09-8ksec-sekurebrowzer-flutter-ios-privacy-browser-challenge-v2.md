@@ -24,7 +24,8 @@ find Extracted_ipa/Payload/Runner.app -maxdepth 2
 
 Bundle ID is `com.eightksec.sekurebrowzer`. The executable is named `Runner` — that's Xcode's default project name for a fresh Flutter iOS build, not something a native project would normally be called. And inside `Frameworks/` there are two frameworks that give it away completely:
 
-```
+```bash
+$ ls -1
 Frameworks/App.framework/App
 Frameworks/Flutter.framework/Flutter
 ```
@@ -64,7 +65,7 @@ _**Figure: Stripped symbols**_
 The cheapest first pass is just `strings` over the binary:
 
 ```bash
-strings -a -n 4 Extracted_ipa/Payload/Runner.app/Frameworks/App.framework/App > app_strings.txt
+$ strings -a -n 4 Extracted_ipa/Payload/Runner.app/Frameworks/App.framework/App > app_strings.txt
 ```
 
 Dart's AOT compiler strips almost all debug symbols, but it can't strip two things: string constants that are actually used at runtime, and (for whatever the tree-shaker didn't fully anonymize) mangled names shaped like `_functionName@<library-id>`. Still, that library-id suffix is useful on its own: two symbols sharing the same `@<id>` come from the same compilation unit, so you can cluster nameless code back into "these all belong to one file" even before you have real names.
@@ -78,8 +79,8 @@ To get real function-level structure, you need the Dart VM's own symbol table, a
 [reFlutter](https://github.com/Impact-I/reFlutter) patches the Dart snapshot header inside the IPA so the app boots against a debug-instrumented Dart VM instead of the release one. Then, on startup, that instrumented VM walks its own isolate and dumps every compiled function's name, owning class, defining library, and code offset into a file called `dump.dart` inside the app's sandbox.
 
 ```bash
-pip3 install reflutter
-reflutter SeckureBrowzer.ipa
+$ pip3 install reflutter
+$ reflutter SeckureBrowzer.ipa
 ```
 
 That produces `release.RE.ipa`. Its signature is invalid after patching, so it needs to be resigned for a real device — a free developer certificate is enough, since this challenge specifically targets non-jailbroken iOS anyway. Then resign it, install to a device (Xcode's Devices and Simulators window, or any sideloading tool), launch the app, and wait for a few seconds to let it settle. The patched VM writes `dump.dart` into app sandbox folder `Documents/` on its own, so no special trigger is needed.
@@ -126,7 +127,7 @@ Each record looks like this:
 
 `dump.dart` gives names and offsets, not addresses IDA understands directly. Each record's offset is relative to the isolate's AOT instructions section, exported in this binary as `_kDartIsolateSnapshotInstructions`. Resolve that symbol once, add each offset to it, and the result is a real address to rename — the script below does exactly that in IDA:
 
-```
+```asm
 ; Export
 Name	                                Address	Ordinal
 _kDartIsolateSnapshotData	            00000000002CEFC0	
@@ -1536,10 +1537,7 @@ DONE
 
 A second selector, `0` (`String.==`), was cross-checked the same way against `classId=94` (`OneByteString`) and resolved to file offset `0x258358` — the exact address a completely separate Frida hook (directly on the string-equality routine itself, described below). So two different methods landing on the same address is strong evidence the whole pipeline — `X21` capture, index math, `dump.dart` lookup — is correct end to end.
 
-Resolving a raw target address back to a name is one line of arithmetic plus a `dump.dart` lookup:
-```
-dump.dart offset = (live_target_address - App_module_base) - 0xE8C0
-```
+Resolving a raw target address back to a name is one line of arithmetic plus a `dump.dart` lookup: `dump.dart offset = (live_target_address - App_module_base) - 0xE8C0`
 
 That resolution pipeline (`resolve_dispatch_table.py`) can be sanity-checked with no device at all, against addresses already confirmed elsewhere:
 
@@ -1859,9 +1857,8 @@ SnackBar "Processing deep link: <uri>"
 
 Tracing the actual control flow surfaces two behaviors a quick read misses: `openGallery` outranks everything, including `dbCommand` — if both are present on the same link, `openGallery` wins and the function returns before `dbCommand` is even inspected. And `url` has a hardcoded fallback (`https://yahoo.com`) when it's absent, so even a param-less link still forces a navigation — though that only matters when `dbCommand` isn't also present, since `dbCommand` short-circuits before reaching the `url` handling at all.
 
-Putting it together, this is the shape of the scheme:
-
-```
+Putting it together, this is the shape of the scheme: 
+```bash
 sekurebrowzer://<any-host>?url=<page>&takeScreenshot=true&dbCommand=<cmd>&dbId=<id>&attackerUrl=<url>
 ```
 
@@ -1887,7 +1884,7 @@ The function's prologue saves five incoming registers to the stack frame:
 
 ### The dispatch: three gated comparisons, then a real no-op default
 
-```
+```C
 if (dbCommand == "getAll") {
     exportedJson = StorageManager.getAllScreenshotsAsJson()
     runJavaScript(<template: writes JSON into a hidden #stolen-data div, ends with alert()>)
