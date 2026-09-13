@@ -486,9 +486,8 @@ var FUNC_RANGE_CLAMP_BYTES = 0x2000;    // 8 KiB cap per function disasm pass
 var CLASS_FILTER_REGEX = null;          // e.g. /BrowserScreenState|StorageManager/
 
 // dump.dart's "offset" field is relative to _kDartIsolateSnapshotInstructions,
-// NOT relative to the App Mach-O image base directly. Confirmed this session
-// (Analysis/05_reflutter_symbol_reconstruction.md, "Confirmed dispatcher
-// control flow"): IDA address of _processDataCommand (0x19f83c) == dump.dart
+// NOT relative to the App Mach-O image base directly. IDA address of 
+// _processDataCommand (0x19f83c) == dump.dart
 // raw offset (0x190f7c) + this constant. This constant is specific to this
 // exact App binary build -- re-derive it (find
 // _kDartIsolateSnapshotInstructions in IDA/Ghidra on any other build) before
@@ -969,18 +968,7 @@ def parse_owner(owner_str):
     return m.group(1), m.group(2)
 
 
-def resolve_owner_func_ea(class_name, method_name):
-    """
-    Best-effort name resolution against the `ClassName__method_name` IDA
-    renaming convention confirmed in
-    05_reflutter_symbol_reconstruction.md ("Confirmed dispatcher control
-    flow"). Tries a few plausible variants since that doc only confirms
-    the pattern on one example pair (class name WITHOUT its Dart-source
-    leading underscore, e.g. `_BrowserScreenState` -> `BrowserScreenState__...`)
-    -- not exhaustively re-verified against all 10,975 renamed functions
-    here, so this is a heuristic, same honesty posture as everything else
-    in this file. Returns BADADDR if nothing matches.
-    """
+def resolve_owner_func_ea(class_name, method_name):    
     candidates = [
         "%s__%s" % (class_name, method_name),
     ]
@@ -1406,18 +1394,12 @@ TARGET = "com.eightksec.sekurebrowzer"
 SCRIPT = os.path.join(os.path.dirname(__file__), "hook_dispatch_table.js")
 DUMP_DART = os.path.join(os.path.dirname(__file__), "../..", "dump.dart")
 
-# Established in 05_reflutter_symbol_reconstruction.md's "Confirmed
-# dispatcher control flow" section: IDA address of
-# _kDartIsolateSnapshotInstructions, i.e. dump.dart_offset + this base =
+# IDA address of _kDartIsolateSnapshotInstructions, i.e. dump.dart_offset + this base =
 # the real IDA/file address every other tool in this repo already uses.
 SNAPSHOT_INSTRUCTIONS_BASE = 0xE8C0
 
 
-def load_dump_dart(path):
-    """Streaming-parse dump.dart (concatenated JSON objects, no wrapper)
-    into {offset_int: [record, ...]} -- a list per offset because 184 of
-    the 12,570 offsets are shared by more than one symbol (AOT identical-
-    code-folding of trivial functions, per 05_reflutter_symbol_reconstruction.md)."""
+def load_dump_dart(path):    
     with open(path, "r") as f:
         text = f.read()
 
@@ -1521,8 +1503,7 @@ def main():
     # Example generalized-lookup calls, illustrating resolveIndex/sweepSelector
     # for selectors NOT hardcoded into hook_dispatch_table.js's six sites --
     # e.g. re-deriving the same "String.==" (selector 0) result independently
-    # for OneByteString's own class id (0x5E / 94), confirmed in
-    # 06_ida_string_annotation.md:
+    # for OneByteString's own class id (0x5E / 94)
     try:
         r = script.exports_sync.resolveIndex(94, 0)
         print(">> resolveIndex(classId=94, selector=0):", r)
