@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] Debugging Stack Trace Disclosure on Ednovation Dashboard Subdomain"
-date: 2025-08-22
+date: 2125-08-22
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]

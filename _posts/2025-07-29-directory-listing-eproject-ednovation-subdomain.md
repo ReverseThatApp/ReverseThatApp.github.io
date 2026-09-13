@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] Directory Listing Exposure on Ednovation's Production Subdomain EProject"
-date: 2025-07-29
+date: 2125-07-29
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]

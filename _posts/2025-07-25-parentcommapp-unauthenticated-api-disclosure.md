@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] Unauthenticated API Exposure in Ednovation ParentCommApp"
-date: 2025-07-25
+date: 2125-07-25
 cve: "Reported"
 status: "Fixing"
 categories: [Disclosure]

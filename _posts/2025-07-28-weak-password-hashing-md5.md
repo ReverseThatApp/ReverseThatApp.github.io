@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] Weak Password Hashing Using MD5 in Ednovation's AIMath Web App"
-date: 2025-07-28
+date: 2125-07-28
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]

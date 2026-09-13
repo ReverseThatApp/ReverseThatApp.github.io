@@ -2,7 +2,7 @@
 layout: post
 # Possible CVE status: "CVE REQUESTED", "CVE RESERVED", "REPORTED", "FIXED", "FIXED – NO CVE", "NO RESPONSE", "UNPATCHED", "CVE-YYYY-NNNNN"
 title: "[CVE REQUESTED] Public Data Exposure via Broken Auth in AIMath Web App"
-date: 2025-07-27
+date: 2125-07-27
 cve: "Reported"
 status: "Fixed"
 categories: [Disclosure]
